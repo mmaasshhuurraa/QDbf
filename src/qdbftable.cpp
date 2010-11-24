@@ -40,9 +40,10 @@ public:
 
     void setTextCodec();
 
-    QString m_fileName;
     QAtomicInt ref;
+    QString m_fileName;
     QFile m_file;
+    QDbfTable::OpenMode m_openMode;
     QTextCodec *m_textCodec;
     QDbfTableType m_type;
     QDbfTable::Codepage m_codepage;
@@ -62,6 +63,7 @@ using namespace QDbf::Internal;
 
 QDbfTablePrivate::QDbfTablePrivate() :
     ref(1),
+    m_openMode(QDbfTable::ReadOnly),
     m_textCodec(QTextCodec::codecForLocale()),
     m_type(QDbfTablePrivate::SimpleTable),
     m_codepage(QDbfTable::CodepageNotSet),
@@ -120,12 +122,17 @@ bool QDbfTablePrivate::open(const QString &fileName, QDbfTable::OpenMode openMod
 
 bool QDbfTablePrivate::open(QDbfTable::OpenMode openMode)
 {
+    m_openMode = openMode;
+
     if (m_file.isOpen()) {
         m_file.close();
     }
 
     m_file.setFileName(m_fileName);
-    m_file.open(openMode == QDbfTable::ReadWrite ? QIODevice::ReadWrite : QIODevice::ReadOnly);
+
+    if (!m_file.open(openMode == QDbfTable::ReadWrite ? QIODevice::ReadWrite : QIODevice::ReadOnly)) {
+        return false;
+    }
 
     unsigned char headerData[32];
 
@@ -335,6 +342,11 @@ QDbfTable::~QDbfTable()
 QString QDbfTable::fileName() const
 {
     return d->m_file.fileName();
+}
+
+QDbfTable::OpenMode QDbfTable::openMode() const
+{
+    return d->m_openMode;
 }
 
 bool QDbfTable::open(const QString &fileName, OpenMode openMode)

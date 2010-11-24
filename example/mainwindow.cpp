@@ -86,7 +86,6 @@ void MainWindowPrivate::init()
     QObject::connect(m_selectFileButton, SIGNAL(clicked()), q, SLOT(openFile()));
     m_fileLocationLayout->addWidget(m_selectFileButton);
 
-    m_tableView->setEditTriggers(QTableView::NoEditTriggers);
     m_tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
     m_baseLayout->addWidget(m_tableView);
 }
@@ -111,7 +110,7 @@ void MainWindowPrivate::openFile()
         delete m_model;
     }
 
-    m_model = new QDbf::QDbfTableModel(filePath, QDbf::QDbfTable::ReadOnly);
+    m_model = new QDbf::QDbfTableModel(filePath);
     m_tableView->setModel(m_model);
 }
 

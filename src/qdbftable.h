@@ -45,6 +45,8 @@ public:
 
     QString fileName() const;
 
+    QDbfTable::OpenMode openMode() const;
+
     bool setCodepage(QDbfTable::Codepage codepage);
     QDbfTable::Codepage codepage() const;
 
