@@ -1,0 +1,26 @@
+syntax: glob
+
+# Compiled source #
+###################
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+*.a
+
+# OS generated files #
+######################
+Thumbs.db
+
+# Folder ignores #
+##################
+build/
+bin/
+lib/
+*.pdb
+*.Debug
+*.Release
+Makefile
+*.pro.user*
