@@ -20,15 +20,24 @@ class QDBF_EXPORT QDbfTable
 {
 public:
     enum Codepage {
-        UnknownCodepage = -1,
-        CodepageNotSet  = 0,
+        CodepageNotSet = 0,
         IBM866,
-        Windows1251
+        Windows1251,
+        UnspecifiedCodepage
     };
 
     enum OpenMode {
-        ReadOnly,
+        ReadOnly = 0,
         ReadWrite
+    };
+
+    enum DbfTableError {
+        NoError = 0,
+        OpenError,
+        ReadError,
+        WriteError,
+        PermissionsError,
+        UnspecifiedError
     };
 
     QDbfTable();
@@ -41,11 +50,14 @@ public:
 
     bool open(const QString &fileName, OpenMode openMode = QDbfTable::ReadOnly);
     bool open(OpenMode openMode = QDbfTable::ReadOnly);
+
     void close();
 
     QString fileName() const;
 
     QDbfTable::OpenMode openMode() const;
+
+    DbfTableError error() const;
 
     bool setCodepage(QDbfTable::Codepage codepage);
     QDbfTable::Codepage codepage() const;

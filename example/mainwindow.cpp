@@ -6,14 +6,16 @@
 #include <QtCore/QDebug>
 #include <QtCore/QDir>
 #include <QtCore/QFileInfo>
-#include <QtCore/QPointer>
 
 #include <QtGui/QFileDialog>
 #include <QtGui/QHBoxLayout>
 #include <QtGui/QLineEdit>
+#include <QtGui/QMessageBox>
 #include <QtGui/QPushButton>
 #include <QtGui/QTableView>
 #include <QtGui/QVBoxLayout>
+
+const char * const SELECT_FILE_TEXT = "Select dbf file by clicking on the button ----->";
 
 namespace Example {
 namespace Internal {
@@ -21,13 +23,13 @@ namespace Internal {
 class MainWindowPrivate
 {
 public:
-    MainWindowPrivate(MainWindow *parent);
+    MainWindowPrivate();
     ~MainWindowPrivate();
 
     void init();
     void openFile();
 
-    MainWindow *const q;
+    MainWindow *q;
     QWidget *const m_centralWidget;
     QVBoxLayout *const m_baseLayout;
     QHBoxLayout *const m_fileLocationLayout;
@@ -35,7 +37,7 @@ public:
     QPushButton *const m_selectFileButton;
     QTableView *const m_tableView;
     QDir m_dir;
-    QPointer<QDbf::QDbfTableModel> m_model;
+    QDbf::QDbfTableModel *const m_model;
 };
 
 } // namespace Internal
@@ -44,16 +46,16 @@ public:
 using namespace Example;
 using namespace Example::Internal;
 
-MainWindowPrivate::MainWindowPrivate(MainWindow *parent) :
-    q(parent),
-    m_centralWidget(new QWidget(parent)),
+MainWindowPrivate::MainWindowPrivate() :
+    q(0),
+    m_centralWidget(new QWidget()),
     m_baseLayout(new QVBoxLayout(m_centralWidget)),
     m_fileLocationLayout(new QHBoxLayout()),
     m_fileLocationEditor(new QLineEdit()),
     m_selectFileButton(new QPushButton(QString::fromLatin1("..."), 0)),
     m_tableView(new QTableView()),
     m_dir(QCoreApplication::applicationDirPath()),
-    m_model(0)
+    m_model(new QDbf::QDbfTableModel())
 {
 }
 
@@ -78,7 +80,7 @@ void MainWindowPrivate::init()
     m_baseLayout->addLayout(m_fileLocationLayout);
 
     m_fileLocationEditor->setReadOnly(true);
-    m_fileLocationEditor->setText(QString::fromLatin1("Select dbf file by clicking on the button ----->"));
+    m_fileLocationEditor->setText(QString::fromLatin1(SELECT_FILE_TEXT));
     m_fileLocationLayout->addWidget(m_fileLocationEditor);
 
     m_selectFileButton->setFixedWidth(30);
@@ -86,6 +88,7 @@ void MainWindowPrivate::init()
     QObject::connect(m_selectFileButton, SIGNAL(clicked()), q, SLOT(openFile()));
     m_fileLocationLayout->addWidget(m_selectFileButton);
 
+    m_tableView->setModel(m_model);
     m_tableView->setSelectionBehavior(QAbstractItemView::SelectRows);
     m_baseLayout->addWidget(m_tableView);
 }
@@ -102,22 +105,29 @@ void MainWindowPrivate::openFile()
 
     QFileInfo fileInfo(filePath);
     m_dir = fileInfo.dir();
-
     m_fileLocationEditor->setText(filePath);
+
     m_tableView->setModel(0);
 
-    if (m_model) {
-        delete m_model;
+    if (!m_model->open(filePath)) {
+        const QString title = QLatin1String("Open file error");
+        const QString text = QString(QLatin1String("Can not open file %1")).arg(filePath);
+        QMessageBox::warning(q, title, text, QMessageBox::Ok);
+        m_fileLocationEditor->setText(SELECT_FILE_TEXT);
+
+        qDebug() << m_model->error();
+
+        return;
     }
 
-    m_model = new QDbf::QDbfTableModel(filePath);
     m_tableView->setModel(m_model);
 }
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
-    d(new MainWindowPrivate(this))
+    d(new MainWindowPrivate())
 {
+    d->q = this;
     d->init();
 }
 

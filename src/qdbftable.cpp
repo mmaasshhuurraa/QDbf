@@ -41,6 +41,7 @@ public:
     void setTextCodec();
 
     QAtomicInt ref;
+    QDbfTable::DbfTableError m_error;
     QString m_fileName;
     QFile m_file;
     QDbfTable::OpenMode m_openMode;
@@ -63,6 +64,7 @@ using namespace QDbf::Internal;
 
 QDbfTablePrivate::QDbfTablePrivate() :
     ref(1),
+    m_error(QDbfTable::NoError),
     m_openMode(QDbfTable::ReadOnly),
     m_textCodec(QTextCodec::codecForLocale()),
     m_type(QDbfTablePrivate::SimpleTable),
@@ -78,6 +80,7 @@ QDbfTablePrivate::QDbfTablePrivate() :
 QDbfTablePrivate::QDbfTablePrivate(const QString &dbfFileName) :
     m_fileName(dbfFileName),
     ref(1),
+    m_error(QDbfTable::NoError),
     m_textCodec(0),
     m_type(QDbfTablePrivate::SimpleTable),
     m_codepage(QDbfTable::CodepageNotSet),
@@ -123,6 +126,13 @@ bool QDbfTablePrivate::open(const QString &fileName, QDbfTable::OpenMode openMod
 bool QDbfTablePrivate::open(QDbfTable::OpenMode openMode)
 {
     m_openMode = openMode;
+    m_error = QDbfTable::NoError;
+    m_headerLength = -1;
+    m_recordLength = -1;
+    m_fieldsCount = -1;
+    m_recordsCount = -1;
+    m_currentIndex = -1;
+    m_record = QDbfRecord();
 
     if (m_file.isOpen()) {
         m_file.close();
@@ -131,6 +141,7 @@ bool QDbfTablePrivate::open(QDbfTable::OpenMode openMode)
     m_file.setFileName(m_fileName);
 
     if (!m_file.open(openMode == QDbfTable::ReadWrite ? QIODevice::ReadWrite : QIODevice::ReadOnly)) {
+        m_error = QDbfTable::OpenError;
         return false;
     }
 
@@ -173,7 +184,7 @@ bool QDbfTablePrivate::open(QDbfTable::OpenMode openMode)
         m_codepage = QDbfTable::Windows1251;
         break;
     default:
-        m_codepage = QDbfTable::UnknownCodepage;
+        m_codepage = QDbfTable::UnspecifiedCodepage;
     }
 
     // set text codec
@@ -253,8 +264,13 @@ void QDbfTablePrivate::close()
 
 bool QDbfTablePrivate::setCodepage(QDbfTable::Codepage codepage)
 {
-    if (!m_file.isOpen() ||
-        !m_file.isWritable()) {
+    if (!m_file.isOpen()) {
+        qWarning("QDbfTablePrivate::setCodepage(): IODevice is not open");
+        return false;
+    }
+
+    if (!m_file.isWritable()) {
+        m_error = QDbfTable::WriteError;
         return false;
     }
 
@@ -347,6 +363,11 @@ QString QDbfTable::fileName() const
 QDbfTable::OpenMode QDbfTable::openMode() const
 {
     return d->m_openMode;
+}
+
+QDbfTable::DbfTableError QDbfTable::error() const
+{
+    return d->m_error;
 }
 
 bool QDbfTable::open(const QString &fileName, OpenMode openMode)
@@ -497,21 +518,21 @@ QVariant QDbfTable::value(int index) const
 
 bool QDbfTable::addRecord() const
 {
-    if (!d->m_file.isOpen() ||
-        !d->m_file.isWritable()) {
-        return false;
-    }
-
-    QDbfRecord record(record());
-    record.clearValues();
-    record.setDeleted(false);
-    return addRecord(record);
+    QDbfRecord newRecord(record());
+    newRecord.clearValues();
+    newRecord.setDeleted(false);
+    return addRecord(newRecord);
 }
 
 bool QDbfTable::addRecord(const QDbfRecord &record) const
 {
-    if (!d->m_file.isOpen() ||
-        !d->m_file.isWritable()) {
+    if (!d->m_file.isOpen()) {
+        qWarning("QDbfTable::addRecord(): IODevice is not open");
+        return false;
+    }
+
+    if (!d->m_file.isWritable()) {
+        d->m_error = QDbfTable::WriteError;
         return false;
     }
 
@@ -521,6 +542,7 @@ bool QDbfTable::addRecord(const QDbfRecord &record) const
     // field
     for (int i = 0; i < d->m_record.count(); ++i) {
         if (d->m_record.field(i).d != record.field(i).d) {
+            d->m_error = QDbfTable::UnspecifiedError;
             return false;
         }
         switch (record.field(i).dbfType()) {
@@ -546,8 +568,15 @@ bool QDbfTable::addRecord(const QDbfRecord &record) const
 
     const qint64 position = d->m_headerLength + d->m_recordLength * (d->m_recordsCount);
 
-    if (!d->m_file.seek(position)) return false;
-    if (d->m_file.write(bytesToWrite) != (qint64) d->m_recordLength + 1) return false;
+    if (!d->m_file.seek(position)) {
+        d->m_error = QDbfTable::ReadError;
+        return false;
+    }
+
+    if (d->m_file.write(bytesToWrite) != (qint64) d->m_recordLength + 1) {
+        d->m_error = QDbfTable::UnspecifiedError;
+        return false;
+    }
 
     int recordsCount = d->m_recordsCount + 1;
 
@@ -558,8 +587,15 @@ bool QDbfTable::addRecord(const QDbfRecord &record) const
         shift += 8;
     }
 
-    if (!d->m_file.seek(4)) return false;
-    if (d->m_file.write((const char *) recordsCountChars, 4) != 4) return false;
+    if (!d->m_file.seek(4)) {
+        d->m_error = QDbfTable::ReadError;
+        return false;
+    }
+
+    if (d->m_file.write((const char *) recordsCountChars, 4) != 4) {
+        d->m_error = QDbfTable::UnspecifiedError;
+        return false;
+    }
 
     d->m_recordsCount++;
 
@@ -568,8 +604,13 @@ bool QDbfTable::addRecord(const QDbfRecord &record) const
 
 bool QDbfTable::updateRecordInTable(const QDbfRecord &record) const
 {
-    if (!d->m_file.isOpen() ||
-        !d->m_file.isWritable()) {
+    if (!d->m_file.isOpen()) {
+        qWarning("QDbfTable::addRecord(): IODevice is not open");
+        return false;
+    }
+
+    if (!d->m_file.isWritable()) {
+        d->m_error = QDbfTable::WriteError;
         return false;
     }
 
@@ -603,10 +644,12 @@ bool QDbfTable::updateRecordInTable(const QDbfRecord &record) const
     const qint64 position = d->m_headerLength + d->m_recordLength * (record.recordIndex());
 
     if (!d->m_file.seek(position)) {
+        d->m_error = QDbfTable::ReadError;
         return false;
     }
 
     if (d->m_file.write(bytesToWrite) != static_cast<qint64>(d->m_recordLength)) {
+        d->m_error = QDbfTable::UnspecifiedError;
         return false;
     }
 
@@ -617,12 +660,14 @@ bool QDbfTable::removeRecord(int index) const
 {
     if (index < QDbfTablePrivate::FirstRow ||
         index > (size() - 1)) {
+        d->m_error = QDbfTable::UnspecifiedError;
         return false;
     }
 
     const qint64 position = d->m_headerLength + d->m_recordLength * index;
 
     if (!d->m_file.seek(position)) {
+        d->m_error = QDbfTable::ReadError;
         return false;
     }
 
@@ -632,11 +677,10 @@ bool QDbfTable::removeRecord(int index) const
         return false;
     }
 
-    qDebug() << recordData;
-
     unsigned char byte = static_cast<unsigned char>(42);
 
     if (d->m_file.write(reinterpret_cast<char *>(&byte), 1) != 1) {
+        d->m_error = QDbfTable::UnspecifiedError;
         return false;
     }
 

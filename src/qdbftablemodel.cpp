@@ -12,11 +12,12 @@ namespace Internal {
 class QDbfTableModelPrivate
 {
 public:
-    QDbfTableModelPrivate(const QString &dbfFileName,
-                          bool readOnly,
-                          QDbfTableModel *parent);
-
+    QDbfTableModelPrivate();
+    QDbfTableModelPrivate(const QString &filePath);
     ~QDbfTableModelPrivate();
+
+    bool open(const QString &filePath, bool readOnly = false);
+    bool open(bool readOnly = false);
 
     int rowCount(const QModelIndex &index = QModelIndex()) const;
     int columnCount(const QModelIndex &index = QModelIndex()) const;
@@ -33,9 +34,10 @@ public:
     bool canFetchMore(const QModelIndex &index = QModelIndex()) const;
     void fetchMore(const QModelIndex &index = QModelIndex());
 
-    QDbfTableModel *const q;
+    QDbfTableModel *q;
+    QString m_filePath;
+    bool m_readOnly;
     QDbfTable *const m_dbfTable;
-
     QDbfRecord m_record;
     QVector<QDbfRecord> m_records;
     QVector<QHash<int, QVariant> > m_headers;
@@ -49,26 +51,62 @@ public:
 using namespace QDbf;
 using namespace QDbf::Internal;
 
-QDbfTableModelPrivate::QDbfTableModelPrivate(const QString &dbfFileName,
-                                             bool readOnly,
-                                             QDbfTableModel *parent) :
-    q(parent),
-    m_dbfTable(new QDbfTable(dbfFileName)),
+QDbfTableModelPrivate::QDbfTableModelPrivate() :
+    q(0),
+    m_filePath(QString::null),
+    m_readOnly(false),
+    m_dbfTable(new QDbfTable()),
     m_deletedRecordsCount(0),
     m_lastRecordIndex(-1)
 {
-    const QDbfTable::OpenMode &openMode = readOnly
-            ? QDbfTable::ReadOnly
-            : QDbfTable::ReadWrite;
+}
 
-    m_dbfTable->open(openMode);
-    m_record = m_dbfTable->record();
+QDbfTableModelPrivate::QDbfTableModelPrivate(const QString &filePath) :
+    q(0),
+    m_filePath(filePath),
+    m_readOnly(false),
+    m_dbfTable(new QDbfTable()),
+    m_deletedRecordsCount(0),
+    m_lastRecordIndex(-1)
+{
 }
 
 QDbfTableModelPrivate::~QDbfTableModelPrivate()
 {
     m_dbfTable->close();
     delete m_dbfTable;
+}
+
+bool QDbfTableModelPrivate::open(const QString &filePath, bool readOnly)
+{
+    m_filePath = filePath;
+    return open(readOnly);
+}
+
+bool QDbfTableModelPrivate::open(bool readOnly)
+{
+    m_readOnly = readOnly;
+    m_record = QDbfRecord();
+    m_records.clear();
+    m_headers.clear();
+    m_deletedRecordsCount = 0;
+    m_lastRecordIndex = -1;
+
+    const QDbfTable::OpenMode &openMode = m_readOnly
+            ? QDbfTable::ReadOnly
+            : QDbfTable::ReadWrite;
+
+    if (!m_dbfTable->open(m_filePath, openMode)) {
+        return false;
+    }
+
+    m_record = m_dbfTable->record();
+
+    if (canFetchMore()) {
+        fetchMore();
+    }
+
+    return true;
 }
 
 int QDbfTableModelPrivate::rowCount(const QModelIndex &index) const
@@ -139,8 +177,7 @@ QVariant QDbfTableModelPrivate::data(const QModelIndex &index, int role) const
 
     QVariant value = m_records.at(index.row()).value(index.column());
 
-    if (role == Qt::EditRole &&
-        value.type() == QVariant::String) {
+    if (value.type() == QVariant::String) {
         value = value.toString().trimmed();
     }
 
@@ -232,18 +269,43 @@ void QDbfTableModelPrivate::fetchMore(const QModelIndex &index)
     q->endInsertRows();
 }
 
-QDbfTableModel::QDbfTableModel(const QString &dbfFileName, bool readOnly, QObject *parent) :
+QDbfTableModel::QDbfTableModel(QObject *parent) :
     QAbstractTableModel(parent),
-    d(new QDbfTableModelPrivate(dbfFileName, readOnly, this))
+    d(new QDbfTableModelPrivate())
 {
-    if (canFetchMore()) {
-        fetchMore();
-    }
+    d->q = this;
+}
+
+QDbfTableModel::QDbfTableModel(const QString &filePath, QObject *parent) :
+    QAbstractTableModel(parent),
+    d(new QDbfTableModelPrivate(filePath))
+{
+    d->q = this;
 }
 
 QDbfTableModel::~QDbfTableModel()
 {
     delete d;
+}
+
+bool QDbfTableModel::open(const QString &filePath, bool readOnly)
+{
+    return d->open(filePath, readOnly);
+}
+
+bool QDbfTableModel::open(bool readOnly)
+{
+    return d->open(readOnly);
+}
+
+bool QDbfTableModel::readOnly() const
+{
+    return d->m_readOnly;
+}
+
+QDbfTable::DbfTableError QDbfTableModel::error() const
+{
+    return d->m_dbfTable->error();
 }
 
 int QDbfTableModel::rowCount(const QModelIndex &index) const

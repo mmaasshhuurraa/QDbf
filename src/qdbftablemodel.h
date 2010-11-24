@@ -18,11 +18,18 @@ class QDBF_EXPORT QDbfTableModel : public QAbstractTableModel
     Q_OBJECT
 
 public:
-    QDbfTableModel(const QString &dbfFileName,
-                   bool readOnly = false,
-                   QObject *parent = 0);
-
+    explicit QDbfTableModel(QObject *parent = 0);
+    QDbfTableModel(const QString &filePath, QObject *parent = 0);
     ~QDbfTableModel();
+
+    bool open(const QString &filePath, bool readOnly = false);
+    bool open(bool readOnly = false);
+
+    void close();
+
+    bool readOnly() const;
+
+    QDbfTable::DbfTableError error() const;
 
     int rowCount(const QModelIndex &index = QModelIndex()) const;
     int columnCount(const QModelIndex &index = QModelIndex()) const;
