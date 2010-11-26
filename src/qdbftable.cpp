@@ -59,8 +59,8 @@ public:
     QByteArray recordData(const QDbfRecord &record, bool addEndOfFileMark = false) const;
 
     QAtomicInt ref;
-    mutable QDbfTable::DbfTableError m_error;
     QString m_fileName;
+    mutable QDbfTable::DbfTableError m_error;
     mutable QFile m_file;
     QDbfTable::OpenMode m_openMode;
     QTextCodec *m_textCodec;
@@ -70,10 +70,10 @@ public:
     int m_recordLength;
     int m_fieldsCount;
     int m_recordsCount;
-    QDbfRecord m_record;
-    mutable bool m_bufered;
     mutable int m_currentIndex;
+    mutable bool m_bufered;
     mutable QDbfRecord m_currentRecord;
+    QDbfRecord m_record;
 };
 
 } // namespace Internal
@@ -93,29 +93,33 @@ QDbfTablePrivate::QDbfTablePrivate() :
     m_recordLength(-1),
     m_fieldsCount(-1),
     m_recordsCount(-1),
-    m_bufered(false),
-    m_currentIndex(-1)
+    m_currentIndex(-1),
+    m_bufered(false)
 {
 }
 
 QDbfTablePrivate::QDbfTablePrivate(const QString &dbfFileName) :
-    m_fileName(dbfFileName),
     ref(1),
+    m_fileName(dbfFileName),
     m_error(QDbfTable::NoError),
-    m_textCodec(0),
+    m_openMode(QDbfTable::ReadOnly),
+    m_textCodec(QTextCodec::codecForLocale()),
     m_type(QDbfTablePrivate::SimpleTable),
     m_codepage(QDbfTable::CodepageNotSet),
     m_headerLength(-1),
     m_recordLength(-1),
     m_fieldsCount(-1),
     m_recordsCount(-1),
-    m_currentIndex(-1)
+    m_currentIndex(-1),
+    m_bufered(false)
 {
 }
 
 QDbfTablePrivate::QDbfTablePrivate(const QDbfTablePrivate &other) :
-    m_fileName(other.m_fileName),
     ref(1),
+    m_fileName(other.m_fileName),
+    m_error(other.m_error),
+    m_openMode(other.m_openMode),
     m_textCodec(other.m_textCodec),
     m_type(other.m_type),
     m_codepage(other.m_codepage),
@@ -123,7 +127,10 @@ QDbfTablePrivate::QDbfTablePrivate(const QDbfTablePrivate &other) :
     m_recordLength(other.m_recordLength),
     m_fieldsCount(other.m_fieldsCount),
     m_recordsCount(other.m_recordsCount),
-    m_currentIndex(other.m_currentIndex)
+    m_currentIndex(other.m_currentIndex),
+    m_bufered(other.m_bufered),
+    m_currentRecord(other.m_currentRecord),
+    m_record(other.m_record)
 {
     m_file.setFileName(other.m_fileName);
     if (other.isOpen()) {
