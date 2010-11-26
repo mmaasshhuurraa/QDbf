@@ -114,9 +114,6 @@ void MainWindowPrivate::openFile()
         const QString text = QString(QLatin1String("Can not open file %1")).arg(filePath);
         QMessageBox::warning(q, title, text, QMessageBox::Ok);
         m_fileLocationEditor->setText(SELECT_FILE_TEXT);
-
-        qDebug() << m_model->error();
-
         return;
     }
 

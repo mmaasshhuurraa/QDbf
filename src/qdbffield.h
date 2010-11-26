@@ -9,6 +9,7 @@ namespace QDbf {
 
 namespace Internal {
     class QDbfFieldPrivate;
+    class QDbfTablePrivate;
 }
 
 class QDBF_EXPORT QDbfField
@@ -68,7 +69,7 @@ private:
     QVariant val;
     void detach();
 
-    friend class QDbfTable;
+    friend class Internal::QDbfTablePrivate;
 };
 
 } // namespace QDbf

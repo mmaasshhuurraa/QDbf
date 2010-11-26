@@ -37,13 +37,31 @@ public:
     void close();
 
     bool setCodepage(QDbfTable::Codepage m_codepage);
+    QDbfTable::Codepage codepage() const;
+
+    bool isOpen() const;
+    int size() const;
+    int at() const;
+    bool previous() const;
+    bool next() const;
+    bool first() const;
+    bool last() const;
+    bool seek(int index) const;
+
+    QDbfRecord record() const;
+    QVariant value(int index) const;
+    bool addRecord();
+    bool addRecord(const QDbfRecord &record);
+    bool updateRecordInTable(const QDbfRecord &record);
+    bool removeRecord(int index);
 
     void setTextCodec();
+    QByteArray recordData(const QDbfRecord &record, bool addEndOfFileMark = false) const;
 
     QAtomicInt ref;
-    QDbfTable::DbfTableError m_error;
+    mutable QDbfTable::DbfTableError m_error;
     QString m_fileName;
-    QFile m_file;
+    mutable QFile m_file;
     QDbfTable::OpenMode m_openMode;
     QTextCodec *m_textCodec;
     QDbfTableType m_type;
@@ -52,8 +70,10 @@ public:
     int m_recordLength;
     int m_fieldsCount;
     int m_recordsCount;
-    int m_currentIndex;
     QDbfRecord m_record;
+    mutable bool m_bufered;
+    mutable int m_currentIndex;
+    mutable QDbfRecord m_currentRecord;
 };
 
 } // namespace Internal
@@ -73,6 +93,7 @@ QDbfTablePrivate::QDbfTablePrivate() :
     m_recordLength(-1),
     m_fieldsCount(-1),
     m_recordsCount(-1),
+    m_bufered(false),
     m_currentIndex(-1)
 {
 }
@@ -105,14 +126,14 @@ QDbfTablePrivate::QDbfTablePrivate(const QDbfTablePrivate &other) :
     m_currentIndex(other.m_currentIndex)
 {
     m_file.setFileName(other.m_fileName);
-    if (other.m_file.isOpen()) {
+    if (other.isOpen()) {
         m_file.open(other.m_file.openMode());
     }
 }
 
 QDbfTablePrivate::~QDbfTablePrivate()
 {
-    if (m_file.isOpen()) {
+    if (isOpen()) {
         m_file.close();
     }
 }
@@ -132,9 +153,11 @@ bool QDbfTablePrivate::open(QDbfTable::OpenMode openMode)
     m_fieldsCount = -1;
     m_recordsCount = -1;
     m_currentIndex = -1;
+    m_bufered = false;
     m_record = QDbfRecord();
+    m_currentRecord = QDbfRecord();
 
-    if (m_file.isOpen()) {
+    if (isOpen()) {
         m_file.close();
     }
 
@@ -257,14 +280,14 @@ bool QDbfTablePrivate::open(QDbfTable::OpenMode openMode)
 
 void QDbfTablePrivate::close()
 {
-    if (m_file.isOpen()) {
+    if (isOpen()) {
         m_file.close();
     }
 }
 
 bool QDbfTablePrivate::setCodepage(QDbfTable::Codepage codepage)
 {
-    if (!m_file.isOpen()) {
+    if (!isOpen()) {
         qWarning("QDbfTablePrivate::setCodepage(): IODevice is not open");
         return false;
     }
@@ -289,13 +312,310 @@ bool QDbfTablePrivate::setCodepage(QDbfTable::Codepage codepage)
         return false;
     }
 
-    if (m_file.write(reinterpret_cast<char *>(&byte), 1) == 1) {
-        m_codepage = codepage;
-        setTextCodec();
-        return true;
+    if (m_file.write(reinterpret_cast<char *>(&byte), 1) != 1) {
+        m_error = QDbfTable::WriteError;
+        return false;
     }
 
-    return false;
+    m_codepage = codepage;
+    setTextCodec();
+
+    m_error = QDbfTable::NoError;
+
+    return true;
+}
+
+QDbfTable::Codepage QDbfTablePrivate::codepage() const
+{
+    return m_codepage;
+}
+
+bool QDbfTablePrivate::isOpen() const
+{
+    return m_file.isOpen();
+}
+
+int QDbfTablePrivate::size() const
+{
+    return m_recordsCount;
+}
+
+int QDbfTablePrivate::at() const
+{
+    return m_currentIndex;
+}
+
+bool QDbfTablePrivate::previous() const
+{
+    if (at() <= QDbfTablePrivate::FirstRow) {
+        return false;
+    }
+
+    if (at() > (size() - 1)) {
+        return last();
+    }
+
+    return seek(at() - 1);
+}
+
+bool QDbfTablePrivate::next() const
+{
+    if (at() < QDbfTablePrivate::FirstRow) {
+        return first();
+    }
+
+    if (at() >= (size() - 1)) {
+        return false;
+    }
+
+    return seek(at() + 1);
+}
+
+bool QDbfTablePrivate::first() const
+{
+    return seek(QDbfTablePrivate::FirstRow);
+}
+
+bool QDbfTablePrivate::last() const
+{
+    return seek(size() - 1);
+}
+
+bool QDbfTablePrivate::seek(int index) const
+{
+    const int previousIndex = m_currentIndex;
+
+    if (index < QDbfTablePrivate::FirstRow) {
+        m_currentIndex = QDbfTablePrivate::BeforeFirstRow;
+    } else if (index > (size() - 1)) {
+        m_currentIndex = size() - 1;
+    } else {
+        m_currentIndex = index;
+    }
+
+    if (previousIndex != m_currentIndex) {
+        m_bufered = false;
+    }
+
+    return true;
+}
+
+QDbfRecord QDbfTablePrivate::record() const
+{
+    if (m_bufered) {
+        return m_currentRecord;
+    }
+
+    m_currentRecord = m_record;
+    m_bufered = true;
+
+    if (m_currentIndex < QDbfTablePrivate::FirstRow) {
+        return m_currentRecord;
+    }
+
+    if (!isOpen()) {
+        qWarning("QDbfTablePrivate::record(): IODevice is not open");
+        return m_currentRecord;
+    }
+
+    if (!m_file.isReadable()) {
+        m_error = QDbfTable::ReadError;
+        return m_currentRecord;
+    }
+
+    const qint64 position = m_headerLength + m_recordLength * m_currentIndex;
+
+    if (!m_file.seek(position)) {
+        m_error = QDbfTable::ReadError;
+        return m_currentRecord;
+    }
+
+    m_currentRecord.setRecordIndex(m_currentIndex);
+
+    const QByteArray recordData = m_file.read(m_recordLength);
+
+    if (recordData.count() == 0) {
+        m_error = QDbfTable::UnspecifiedError;
+        return m_currentRecord;
+    }
+
+    m_currentRecord.setDeleted(recordData.at(0) == 42 ? true : false);
+
+    for (int i = 0; i < m_currentRecord.count(); ++i) {
+        const QByteArray byteArray = recordData.mid(m_currentRecord.field(i).offset(),
+                                                    m_currentRecord.field(i).length());
+        QVariant value;
+        switch (m_currentRecord.field(i).type()) {
+        case QVariant::String:
+            value = m_textCodec->toUnicode(byteArray);
+            break;
+        case QVariant::Date:
+            value = QVariant(QDate(byteArray.mid(0, 4).toInt(),
+                                   byteArray.mid(4, 2).toInt(),
+                                   byteArray.mid(6, 2).toInt()));
+            break;
+        case QVariant::Double:
+            value = byteArray.toDouble();
+            break;
+        case QVariant::Bool: {
+            QString val = byteArray.toUpper();
+            if (val == QLatin1String("T") ||
+                val == QLatin1String("Y")) {
+                value = true;
+            } else {
+                value = false;
+            }
+            break; }
+        default:
+            value = QVariant::Invalid;
+        }
+
+        m_currentRecord.setValue(i, value);
+    }
+
+    m_error = QDbfTable::NoError;
+
+    return m_currentRecord;
+}
+
+QVariant QDbfTablePrivate::value(int index) const
+{
+    return record().value(index);
+}
+
+bool QDbfTablePrivate::addRecord()
+{
+    QDbfRecord newRecord(record());
+    newRecord.clearValues();
+    newRecord.setDeleted(false);
+    return addRecord(newRecord);
+}
+
+bool QDbfTablePrivate::addRecord(const QDbfRecord &record)
+{
+    if (!isOpen()) {
+        qWarning("QDbfTablePrivate::addRecord(): IODevice is not open");
+        return false;
+    }
+
+    if (!m_file.isWritable()) {
+        m_error = QDbfTable::WriteError;
+        return false;
+    }
+
+    QByteArray data = recordData(record, true);
+
+    const qint64 position = m_headerLength + m_recordLength * m_recordsCount;
+
+    if (!m_file.seek(position)) {
+        m_error = QDbfTable::ReadError;
+        return false;
+    }
+
+    if (m_file.write(data) != static_cast<qint64>(m_recordLength) + 1) {
+        m_error = QDbfTable::WriteError;
+        return false;
+    }
+
+    int recordsCount = m_recordsCount + 1;
+
+    unsigned char recordsCountChars[4];
+    int shift = 0;
+    for (int i = 0; i < 4; ++i) {
+        recordsCountChars[i] = recordsCount >> shift;
+        shift += 8;
+    }
+
+    if (!m_file.seek(4)) {
+        m_error = QDbfTable::ReadError;
+        return false;
+    }
+
+    if (m_file.write((const char *) recordsCountChars, 4) != 4) {
+        m_error = QDbfTable::WriteError;
+        return false;
+    }
+
+    m_recordsCount++;
+
+    m_error = QDbfTable::NoError;
+
+    return true;
+}
+
+bool QDbfTablePrivate::updateRecordInTable(const QDbfRecord &record)
+{
+    if (!isOpen()) {
+        qWarning("QDbfTablePrivate::addRecord(): IODevice is not open");
+        return false;
+    }
+
+    if (!m_file.isWritable()) {
+        m_error = QDbfTable::WriteError;
+        return false;
+    }
+
+    QByteArray data = recordData(record);
+
+    const qint64 position = m_headerLength + m_recordLength * record.recordIndex();
+
+    if (!m_file.seek(position)) {
+        m_error = QDbfTable::ReadError;
+        return false;
+    }
+
+    if (m_file.write(data) != static_cast<qint64>(m_recordLength)) {
+        m_error = QDbfTable::WriteError;
+        return false;
+    }
+
+    m_error = QDbfTable::NoError;
+
+    return true;
+}
+
+bool QDbfTablePrivate::removeRecord(int index)
+{
+    if (!isOpen()) {
+        qWarning("QDbfTablePrivate::removeRecord(): IODevice is not open");
+        return false;
+    }
+
+    if (!m_file.isWritable()) {
+        m_error = QDbfTable::WriteError;
+        return false;
+    }
+
+    if (index < QDbfTablePrivate::FirstRow ||
+        index > (size() - 1)) {
+        m_error = QDbfTable::UnspecifiedError;
+        return false;
+    }
+
+    const qint64 position = m_headerLength + m_recordLength * index;
+
+    if (!m_file.seek(position)) {
+        m_error = QDbfTable::ReadError;
+        return false;
+    }
+
+    const QByteArray recordData = m_file.read(m_recordLength);
+
+    if (recordData.count() != m_recordLength) {
+        m_error = QDbfTable::UnspecifiedError;
+        return false;
+    }
+
+    unsigned char byte = static_cast<unsigned char>(42);
+
+    if (m_file.write(reinterpret_cast<char *>(&byte), 1) != 1) {
+        m_error = QDbfTable::WriteError;
+        return false;
+    }
+
+    m_error = QDbfTable::NoError;
+
+    return true;
 }
 
 void QDbfTablePrivate::setTextCodec()
@@ -310,6 +630,43 @@ void QDbfTablePrivate::setTextCodec()
     default:
         m_textCodec = QTextCodec::codecForLocale();
     }
+}
+
+QByteArray QDbfTablePrivate::recordData(const QDbfRecord &record, bool addEndOfFileMark) const
+{
+    QByteArray data;
+    // delete flag
+    data.append(record.isDeleted() ? '*' : ' ');
+    // field
+    for (int i = 0; i < m_record.count(); ++i) {
+        if (m_record.field(i).d != record.field(i).d) {
+            m_error = QDbfTable::UnspecifiedError;
+            return false;
+        }
+        switch (record.field(i).dbfType()) {
+        case QDbfField::Character:
+            data.append(m_textCodec->fromUnicode(record.field(i).value().toString().leftJustified(record.field(i).length(), ' ', true)));
+            break;
+        case QDbfField::Date:
+            data.append(record.field(i).value().toDate().toString(QString("yyyyMMdd")).leftJustified(record.field(i).length(), ' ', true));
+            break;
+        case QDbfField::FloatingPoint:
+        case QDbfField::Number:
+            data.append(QString("%1").arg(record.field(i).value().toDouble(), 0, 'f', record.field(i).precision()).rightJustified(record.field(i).length(), ' ', true));
+            break;
+        case QDbfField::Logical:
+            data.append(record.field(i).value().toBool() ? 'T' : 'F');
+            break;
+        default:
+            data.append(QString("").leftJustified(record.field(i).length(), QChar(' '), true));
+        }
+    }
+
+    if (addEndOfFileMark) {
+        data.append(QChar(26));
+    }
+
+    return data;
 }
 
 QDbfTable::QDbfTable() :
@@ -392,299 +749,77 @@ bool QDbfTable::setCodepage(QDbfTable::Codepage codepage)
 
 QDbfTable::Codepage QDbfTable::codepage() const
 {
-    return d->m_codepage;
+    return d->codepage();
 }
 
 bool QDbfTable::isOpen() const
 {
-    return d->m_file.isOpen();
+    return d->isOpen();
 }
 
 int QDbfTable::size() const
 {
-    return d->m_recordsCount;
+    return d->size();
 }
 
 int QDbfTable::at() const
 {
-    return d->m_currentIndex;
+    return d->at();
 }
 
 bool QDbfTable::previous() const
 {
-    if (at() <= QDbfTablePrivate::FirstRow) {
-        return false;
-    }
-
-    if (at() > (size() - 1)) {
-        return last();
-    }
-
-    return seek(at() - 1);
+    return d->previous();
 }
 
 bool QDbfTable::next() const
 {
-    if (at() < QDbfTablePrivate::FirstRow) {
-        return first();
-    }
-
-    if (at() >= (size() - 1)) {
-        return false;
-    }
-
-    return seek(at() + 1);
+    return d->next();
 }
 
 bool QDbfTable::first() const
 {
-    return seek(QDbfTablePrivate::FirstRow);
+    return d->first();
 }
 
 bool QDbfTable::last() const
 {
-    return seek(size() - 1);
+    return d->last();
 }
 
 bool QDbfTable::seek(int index) const
 {
-    if (index < QDbfTablePrivate::FirstRow) {
-        d->m_currentIndex = QDbfTablePrivate::BeforeFirstRow;
-    } else if (index > (size() - 1)) {
-        d->m_currentIndex = size() - 1;
-    } else {
-        d->m_currentIndex = index;
-    }
-    return true;
+    return d->seek(index);
 }
 
 QDbfRecord QDbfTable::record() const
 {
-    QDbfRecord record(d->m_record);
-
-    if (!d->m_file.isOpen() || d->m_currentIndex < QDbfTablePrivate::FirstRow) {
-        return record;
-    }
-
-    const qint64 position = d->m_headerLength + d->m_recordLength * d->m_currentIndex;
-
-    if (!d->m_file.seek(position)) {
-        return record;
-    }
-
-    record.setRecordIndex(d->m_currentIndex);
-
-    const QByteArray recordData = d->m_file.read(d->m_recordLength);
-
-    if (recordData.count() == 0) {
-        return record;
-    }
-
-    record.setDeleted(recordData.at(0) == 42 ? true : false);
-
-    for (int i = 0; i < d->m_record.count(); ++i) {
-        const QByteArray byteArray = recordData.mid(record.field(i).offset(),
-                                                    record.field(i).length());
-        QVariant value;
-        switch (record.field(i).type()) {
-        case QVariant::String:
-            value = QVariant(d->m_textCodec->toUnicode(byteArray));
-            break;
-        case QVariant::Date:
-            value = QVariant(QDate(byteArray.mid(0, 4).toInt(),
-                                   byteArray.mid(4, 2).toInt(),
-                                   byteArray.mid(6, 2).toInt()));
-            break;
-        case QVariant::Double:
-            value = QVariant(byteArray.toDouble());
-            break;
-        case QVariant::Bool:
-            value = QVariant((bool) byteArray.toInt());
-            break;
-        default:
-            value = QVariant(QVariant::Invalid);
-        }
-
-        record.setValue(i, value);
-    }
-
-    return record;
+    return d->record();
 }
 
 QVariant QDbfTable::value(int index) const
 {
-    return record().value(index);
+    return d->value(index);
 }
 
-bool QDbfTable::addRecord() const
+bool QDbfTable::addRecord()
 {
-    QDbfRecord newRecord(record());
-    newRecord.clearValues();
-    newRecord.setDeleted(false);
-    return addRecord(newRecord);
+    return d->addRecord();
 }
 
-bool QDbfTable::addRecord(const QDbfRecord &record) const
+bool QDbfTable::addRecord(const QDbfRecord &record)
 {
-    if (!d->m_file.isOpen()) {
-        qWarning("QDbfTable::addRecord(): IODevice is not open");
-        return false;
-    }
-
-    if (!d->m_file.isWritable()) {
-        d->m_error = QDbfTable::WriteError;
-        return false;
-    }
-
-    QByteArray bytesToWrite;
-    // delete flag
-    bytesToWrite.append(record.isDeleted() ? '*' : ' ');
-    // field
-    for (int i = 0; i < d->m_record.count(); ++i) {
-        if (d->m_record.field(i).d != record.field(i).d) {
-            d->m_error = QDbfTable::UnspecifiedError;
-            return false;
-        }
-        switch (record.field(i).dbfType()) {
-        case QDbfField::Character:
-            bytesToWrite.append(d->m_textCodec->fromUnicode(record.field(i).value().toString().leftJustified(record.field(i).length(), ' ', true)));
-            break;
-        case QDbfField::Date:
-            bytesToWrite.append(record.field(i).value().toDate().toString(QString("yyyyMMdd")).leftJustified(record.field(i).length(), ' ', true));
-            break;
-        case QDbfField::FloatingPoint:
-        case QDbfField::Number:
-            bytesToWrite.append(QString("%1").arg(record.field(i).value().toDouble(), 0, 'f', record.field(i).precision()).rightJustified(record.field(i).length(), ' ', true));
-            break;
-        case QDbfField::Logical:
-            bytesToWrite.append(' ');
-            break;
-        default:
-            bytesToWrite.append(QString("").leftJustified(record.field(i).length(), ' ', true));
-        }
-    }
-    // end of file mark
-    bytesToWrite.append(QChar(26));
-
-    const qint64 position = d->m_headerLength + d->m_recordLength * (d->m_recordsCount);
-
-    if (!d->m_file.seek(position)) {
-        d->m_error = QDbfTable::ReadError;
-        return false;
-    }
-
-    if (d->m_file.write(bytesToWrite) != (qint64) d->m_recordLength + 1) {
-        d->m_error = QDbfTable::UnspecifiedError;
-        return false;
-    }
-
-    int recordsCount = d->m_recordsCount + 1;
-
-    unsigned char recordsCountChars[4];
-    int shift = 0;
-    for (int i = 0; i < 4; ++i) {
-        recordsCountChars[i] = recordsCount >> shift;
-        shift += 8;
-    }
-
-    if (!d->m_file.seek(4)) {
-        d->m_error = QDbfTable::ReadError;
-        return false;
-    }
-
-    if (d->m_file.write((const char *) recordsCountChars, 4) != 4) {
-        d->m_error = QDbfTable::UnspecifiedError;
-        return false;
-    }
-
-    d->m_recordsCount++;
-
-    return true;
+    return d->addRecord(record);
 }
 
-bool QDbfTable::updateRecordInTable(const QDbfRecord &record) const
+bool QDbfTable::updateRecordInTable(const QDbfRecord &record)
 {
-    if (!d->m_file.isOpen()) {
-        qWarning("QDbfTable::addRecord(): IODevice is not open");
-        return false;
-    }
-
-    if (!d->m_file.isWritable()) {
-        d->m_error = QDbfTable::WriteError;
-        return false;
-    }
-
-    QByteArray bytesToWrite;
-    // delete flag
-    bytesToWrite.append(record.isDeleted() ? '*' : ' ');
-    // field
-    for (int i = 0; i < d->m_record.count(); ++i) {
-        if (d->m_record.field(i).d != record.field(i).d) {
-            return false;
-        }
-        switch (record.field(i).dbfType()) {
-        case QDbfField::Character:
-            bytesToWrite.append(d->m_textCodec->fromUnicode(record.field(i).value().toString().leftJustified(record.field(i).length(), ' ', true)));
-            break;
-        case QDbfField::Date:
-            bytesToWrite.append(record.field(i).value().toDate().toString(QString("yyyyMMdd")).leftJustified(record.field(i).length(), ' ', true));
-            break;
-        case QDbfField::FloatingPoint:
-        case QDbfField::Number:
-            bytesToWrite.append(QString("%1").arg(record.field(i).value().toDouble(), 0, 'f', record.field(i).precision()).rightJustified(record.field(i).length(), ' ', true));
-            break;
-        case QDbfField::Logical:
-            bytesToWrite.append(' ');
-            break;
-        default:
-            bytesToWrite.append(QString("").leftJustified(record.field(i).length(), QChar(' '), true));
-        }
-    }
-
-    const qint64 position = d->m_headerLength + d->m_recordLength * (record.recordIndex());
-
-    if (!d->m_file.seek(position)) {
-        d->m_error = QDbfTable::ReadError;
-        return false;
-    }
-
-    if (d->m_file.write(bytesToWrite) != static_cast<qint64>(d->m_recordLength)) {
-        d->m_error = QDbfTable::UnspecifiedError;
-        return false;
-    }
-
-    return true;
+    return d->updateRecordInTable(record);
 }
 
-bool QDbfTable::removeRecord(int index) const
+bool QDbfTable::removeRecord(int index)
 {
-    if (index < QDbfTablePrivate::FirstRow ||
-        index > (size() - 1)) {
-        d->m_error = QDbfTable::UnspecifiedError;
-        return false;
-    }
-
-    const qint64 position = d->m_headerLength + d->m_recordLength * index;
-
-    if (!d->m_file.seek(position)) {
-        d->m_error = QDbfTable::ReadError;
-        return false;
-    }
-
-    const QByteArray recordData = d->m_file.read(d->m_recordLength);
-
-    if (recordData.count() == 0) {
-        return false;
-    }
-
-    unsigned char byte = static_cast<unsigned char>(42);
-
-    if (d->m_file.write(reinterpret_cast<char *>(&byte), 1) != 1) {
-        d->m_error = QDbfTable::UnspecifiedError;
-        return false;
-    }
-
-    return true;
+    return d->removeRecord(index);
 }
 
 QDebug operator<<(QDebug debug, const QDbfTable &table)

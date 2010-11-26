@@ -73,10 +73,10 @@ public:
     QDbfRecord record() const;
     QVariant value(int index) const;
 
-    bool addRecord() const;
-    bool addRecord(const QDbfRecord &record) const;
-    bool updateRecordInTable(const QDbfRecord &record) const;
-    bool removeRecord(int index) const;
+    bool addRecord();
+    bool addRecord(const QDbfRecord &record);
+    bool updateRecordInTable(const QDbfRecord &record);
+    bool removeRecord(int index);
 
 private:
     Internal::QDbfTablePrivate *d;

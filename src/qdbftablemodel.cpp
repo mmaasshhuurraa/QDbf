@@ -1,5 +1,6 @@
 #include "qdbftablemodel.h"
 
+#include "qdbffield.h"
 #include "qdbfrecord.h"
 
 #include <QtCore/QDebug>
@@ -123,16 +124,23 @@ int QDbfTableModelPrivate::columnCount(const QModelIndex &index) const
 
 Qt::ItemFlags QDbfTableModelPrivate::flags(const QModelIndex &index) const
 {
+    Qt::ItemFlags flags = Qt::ItemIsEnabled | Qt::ItemIsSelectable;
+
     if (!index.isValid()) {
-        return Qt::ItemIsEnabled;
+        return flags;
     }
 
-    switch (m_dbfTable->openMode()) {
-    case QDbfTable::ReadWrite:
-        return Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemIsEditable;
-    default:
-        return Qt::ItemIsSelectable | Qt::ItemIsEnabled;
+    QVariant &value = m_records.at(index.row()).value(index.column());
+
+    if (value.type() == QVariant::Bool) {
+        flags |= Qt::ItemIsTristate;
     }
+
+    if (!m_readOnly) {
+        flags |= Qt::ItemIsEditable;
+    }
+
+    return flags;
 }
 
 bool QDbfTableModelPrivate::setData(const QModelIndex &index, const QVariant &value, int role)
@@ -171,17 +179,27 @@ QVariant QDbfTableModelPrivate::data(const QModelIndex &index, int role) const
         return QVariant();
     }
 
-    if (role & ~(Qt::DisplayRole | Qt::EditRole)) {
+    QVariant &value = m_records.at(index.row()).value(index.column());
+
+    switch (role) {
+    case Qt::DisplayRole:
+    case Qt::EditRole:
+        switch (value.type()) {
+        case QVariant::String:
+            return value.toString().trimmed();
+        default:
+            return value;
+        }
+     case Qt::CheckStateRole:
+        switch (value.type()) {
+        case QVariant::Bool:
+            return value.toBool() ? Qt::Checked : Qt::Unchecked;
+        default:
+            return QVariant();
+        }
+    default:
         return QVariant();
     }
-
-    QVariant value = m_records.at(index.row()).value(index.column());
-
-    if (value.type() == QVariant::String) {
-        value = value.toString().trimmed();
-    }
-
-    return value;
 }
 
 bool QDbfTableModelPrivate::setHeaderData(int section, Qt::Orientation orientation,
