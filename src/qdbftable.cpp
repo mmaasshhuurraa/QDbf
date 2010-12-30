@@ -12,6 +12,24 @@
 namespace QDbf {
 namespace Internal {
 
+const qint16 DBC_LENGTH = 263;
+const qint16 FIELD_DESCRIPTOR_LENGTH = 32;
+const qint16 FIELD_NAME_LENGTH = 11;
+const qint16 FIELD_LENGTH_OFFSET = 16;
+const qint16 FIELD_PRECISION_OFFSET = 17;
+const qint16 HEADER_LENGTH_OFFSET_1 = 8;
+const qint16 HEADER_LENGTH_OFFSET_2 = 9;
+const qint16 LANGUAGE_DRIVER_OFFSET = 29;
+const qint16 RECORD_LENGTH_OFFSET_1 = 10;
+const qint16 RECORD_LENGTH_OFFSET_2 = 11;
+const qint16 RECORDS_COUNT_OFFSET_1 = 4;
+const qint16 RECORDS_COUNT_OFFSET_2 = 5;
+const qint16 RECORDS_COUNT_OFFSET_3 = 6;
+const qint16 RECORDS_COUNT_OFFSET_4 = 7;
+const qint16 TABLE_DESCRIPTOR_LENGTH = 32;
+const qint16 TERMINATOR_LENGTH = 1;
+const qint16 VERSION_NUMBER_OFFSET = 0;
+
 class QDbfTablePrivate
 {
 public:
@@ -66,9 +84,9 @@ public:
     QTextCodec *m_textCodec;
     QDbfTableType m_type;
     QDbfTable::Codepage m_codepage;
-    int m_headerLength;
-    int m_recordLength;
-    int m_fieldsCount;
+    qint16 m_headerLength;
+    qint16 m_recordLength;
+    qint16 m_fieldsCount;
     int m_recordsCount;
     mutable int m_currentIndex;
     mutable bool m_bufered;
@@ -175,18 +193,20 @@ bool QDbfTablePrivate::open(QDbfTable::OpenMode openMode)
         return false;
     }
 
-    unsigned char headerData[32];
-
-    if (m_file.read((char *) &headerData, 32) != 32) {
+    QByteArray headerData = m_file.read(TABLE_DESCRIPTOR_LENGTH);
+    if (headerData.length() != TABLE_DESCRIPTOR_LENGTH) {
         return false;
     }
 
+    const quint8 versionNumber = static_cast<quint8>(headerData.at(VERSION_NUMBER_OFFSET));
+
     // QDbfTableType
-    switch(headerData[0]) {
+    switch(versionNumber) {
     case 2:
     case 3:
     case 4:
     case 5:
+    case 7:
         m_type = QDbfTablePrivate::SimpleTable;
         break;
     case 48:
@@ -197,13 +217,27 @@ bool QDbfTablePrivate::open(QDbfTable::OpenMode openMode)
         return false;
     }
 
-    m_recordsCount = (int) headerData[4] + (headerData[5] << 8) + (headerData[6] << 16) + (headerData[7] << 24);
-    m_headerLength = (int) headerData[8] + (headerData[9] << 8);
-    m_recordLength = (int) headerData[10] + (headerData[11] << 8);
-    m_fieldsCount  = (m_headerLength - (m_type == QDbfTablePrivate::TableWithDbc ? 296 : 33)) / 32;
+    m_recordsCount = static_cast<int>(headerData.at(RECORDS_COUNT_OFFSET_1) & 0xFF);
+    m_recordsCount += static_cast<int>(((headerData.at(RECORDS_COUNT_OFFSET_2) & 0xFF) << 8));
+    m_recordsCount += static_cast<int>(((headerData.at(RECORDS_COUNT_OFFSET_3) & 0xFF) << 16));
+    m_recordsCount += static_cast<int>(((headerData.at(RECORDS_COUNT_OFFSET_4) & 0xFF) << 24));
+
+    m_headerLength = static_cast<qint16>(headerData.at(HEADER_LENGTH_OFFSET_1) & 0xFF);
+    m_headerLength += static_cast<qint16>(((headerData.at(HEADER_LENGTH_OFFSET_2) & 0xFF) << 8));
+
+    m_recordLength = static_cast<qint16>(headerData.at(RECORD_LENGTH_OFFSET_1) & 0xFF);
+    m_recordLength += static_cast<qint16>(((headerData.at(RECORD_LENGTH_OFFSET_2) & 0xFF) << 8));
+
+    int fieldDescriptorsLength = m_headerLength - TABLE_DESCRIPTOR_LENGTH - TERMINATOR_LENGTH;
+
+    if (m_type == QDbfTablePrivate::TableWithDbc) {
+        fieldDescriptorsLength -= DBC_LENGTH;
+    }
+
+    m_fieldsCount  = fieldDescriptorsLength / FIELD_DESCRIPTOR_LENGTH;
 
     // Codepage
-    switch(headerData[29]) {
+    switch(headerData.at(LANGUAGE_DRIVER_OFFSET)) {
     case 0:
         m_codepage = QDbfTable::CodepageNotSet;
         break;
@@ -220,26 +254,27 @@ bool QDbfTablePrivate::open(QDbfTable::OpenMode openMode)
     // set text codec
     setTextCodec();
 
-    // Fields headers
-    const int fieldsHeadersLength = m_fieldsCount * 32;
+    QVarLengthArray<char> fieldDescriptorsData(fieldDescriptorsLength);
 
-    QVarLengthArray<char> fieldsHeadersData(fieldsHeadersLength);
-
-    if (m_file.read(fieldsHeadersData.data(), fieldsHeadersLength) != fieldsHeadersLength) {
+    if (m_file.read(fieldDescriptorsData.data(),
+                    static_cast<qint64>(fieldDescriptorsLength)) != fieldDescriptorsLength) {
         return false;
     }
 
     int offset = 1;
-    for (int i = 0; i < fieldsHeadersLength; i += 32) {
-        QString fieldName = QString::null;
-        for (int j = 0; j < 11; j++) {
-            if (fieldsHeadersData[i + j] == 0) continue;
-            fieldName.append(QString(fieldsHeadersData[i + j]));
+    for (int i = 0; i < fieldDescriptorsLength; i += FIELD_DESCRIPTOR_LENGTH) {
+        QString fieldName;
+        for (int j = 0; j < FIELD_NAME_LENGTH; j++) {
+            const char fieldNameChar = fieldDescriptorsData.at(i + j) & 0xFF;
+            if (fieldNameChar == 0) {
+                continue;
+            }
+            fieldName.append(m_textCodec->toUnicode(&fieldNameChar, 1));
         }
 
         QVariant::Type fieldType;
         QDbfField::QDbfType fieldQDbfType;
-        unsigned char fieldTypeChar = (unsigned char) fieldsHeadersData[i + 11];
+        quint8 fieldTypeChar = static_cast<quint8>(fieldDescriptorsData.at(i + FIELD_NAME_LENGTH) & 0xFF);
         switch (fieldTypeChar) {
         case 67: // C
             fieldType = QVariant::String;
@@ -268,15 +303,14 @@ bool QDbfTablePrivate::open(QDbfTable::OpenMode openMode)
             fieldType = QVariant::Invalid;
         }
 
-        const int fieldLength = (unsigned char) fieldsHeadersData[i + 16];
-        const int fieldPrecision = (unsigned char) fieldsHeadersData[i + 17];
-        const int fieldOffset = offset;
+        const int fieldLength = static_cast<int>(fieldDescriptorsData.at(i + FIELD_LENGTH_OFFSET) & 0xFF);
+        const int fieldPrecision = static_cast<int>(fieldDescriptorsData.at(i + FIELD_PRECISION_OFFSET) & 0xFF);
 
         QDbfField field(fieldName, fieldType);
         field.setQDbfType(fieldQDbfType);
         field.setLength(fieldLength);
         field.setPrecision(fieldPrecision);
-        field.setOffset(fieldOffset);
+        field.setOffset(offset);
         m_record.append(field);
 
         offset += fieldLength;
@@ -304,16 +338,16 @@ bool QDbfTablePrivate::setCodepage(QDbfTable::Codepage codepage)
         return false;
     }
 
-    m_file.seek(29);
-    unsigned char byte;
+    m_file.seek(LANGUAGE_DRIVER_OFFSET);
+    quint8 byte;
     switch(codepage) {
     case QDbfTable::CodepageNotSet:
-        byte = static_cast<unsigned char>(0);
+        byte = 0;
     case QDbfTable::IBM866:
-        byte = static_cast<unsigned char>(101);
+        byte = 101;
         break;
     case QDbfTable::Windows1251:
-        byte = static_cast<unsigned char>(201);
+        byte = 201;
         break;
     default:
         return false;
@@ -446,7 +480,7 @@ QDbfRecord QDbfTablePrivate::record() const
         return m_currentRecord;
     }
 
-    m_currentRecord.setDeleted(recordData.at(0) == 42 ? true : false);
+    m_currentRecord.setDeleted(recordData.at(0) == '*' ? true : false);
 
     for (int i = 0; i < m_currentRecord.count(); ++i) {
         const QByteArray byteArray = recordData.mid(m_currentRecord.field(i).offset(),
@@ -465,7 +499,7 @@ QDbfRecord QDbfTablePrivate::record() const
             value = byteArray.toDouble();
             break;
         case QVariant::Bool: {
-            QString val = byteArray.toUpper();
+            QString val = QString::fromAscii(byteArray.toUpper());
             if (val == QLatin1String("T") ||
                 val == QLatin1String("Y")) {
                 value = true;
@@ -613,7 +647,7 @@ bool QDbfTablePrivate::removeRecord(int index)
         return false;
     }
 
-    unsigned char byte = static_cast<unsigned char>(42);
+    quint8 byte = '*';
 
     if (m_file.write(reinterpret_cast<char *>(&byte), 1) != 1) {
         m_error = QDbfTable::WriteError;
@@ -652,25 +686,25 @@ QByteArray QDbfTablePrivate::recordData(const QDbfRecord &record, bool addEndOfF
         }
         switch (record.field(i).dbfType()) {
         case QDbfField::Character:
-            data.append(m_textCodec->fromUnicode(record.field(i).value().toString().leftJustified(record.field(i).length(), ' ', true)));
+            data.append(m_textCodec->fromUnicode(record.field(i).value().toString().leftJustified(record.field(i).length(), QLatin1Char(' '), true)));
             break;
         case QDbfField::Date:
-            data.append(record.field(i).value().toDate().toString(QString("yyyyMMdd")).leftJustified(record.field(i).length(), ' ', true));
+            data.append(record.field(i).value().toDate().toString(QString(QLatin1String("yyyyMMdd"))).leftJustified(record.field(i).length(), QLatin1Char(' '), true).toAscii());
             break;
         case QDbfField::FloatingPoint:
         case QDbfField::Number:
-            data.append(QString("%1").arg(record.field(i).value().toDouble(), 0, 'f', record.field(i).precision()).rightJustified(record.field(i).length(), ' ', true));
+            data.append(QString(QLatin1String("%1")).arg(record.field(i).value().toDouble(), 0, 'f', record.field(i).precision()).rightJustified(record.field(i).length(), QLatin1Char(' '), true).toAscii());
             break;
         case QDbfField::Logical:
             data.append(record.field(i).value().toBool() ? 'T' : 'F');
             break;
         default:
-            data.append(QString("").leftJustified(record.field(i).length(), QChar(' '), true));
+            data.append(QString(QLatin1String("")).leftJustified(record.field(i).length(), QLatin1Char(' '), true).toAscii());
         }
     }
 
     if (addEndOfFileMark) {
-        data.append(QChar(26));
+        data.append(QChar(26).toAscii());
     }
 
     return data;

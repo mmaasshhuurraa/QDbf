@@ -22,6 +22,8 @@ namespace Internal {
 
 class MainWindowPrivate
 {
+    Q_DECLARE_TR_FUNCTIONS(MainWindow)
+
 public:
     MainWindowPrivate();
     ~MainWindowPrivate();
@@ -80,7 +82,7 @@ void MainWindowPrivate::init()
     m_baseLayout->addLayout(m_fileLocationLayout);
 
     m_fileLocationEditor->setReadOnly(true);
-    m_fileLocationEditor->setText(QString::fromLatin1(SELECT_FILE_TEXT));
+    m_fileLocationEditor->setText(trUtf8(SELECT_FILE_TEXT));
     m_fileLocationLayout->addWidget(m_fileLocationEditor);
 
     m_selectFileButton->setFixedWidth(30);
@@ -113,7 +115,7 @@ void MainWindowPrivate::openFile()
         const QString title = QLatin1String("Open file error");
         const QString text = QString(QLatin1String("Can not open file %1")).arg(filePath);
         QMessageBox::warning(q, title, text, QMessageBox::Ok);
-        m_fileLocationEditor->setText(SELECT_FILE_TEXT);
+        m_fileLocationEditor->setText(QLatin1String(SELECT_FILE_TEXT));
         return;
     }
 

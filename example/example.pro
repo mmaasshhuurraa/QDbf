@@ -1,15 +1,17 @@
 TARGET = example
 
-include(../application.pri)
-include(../qdbf.pri)
+include(../common.pri)
 
-INCLUDEPATH += \
-    $$PWD \
-    $$PWD/../src
-DEPENDPATH += $$INCLUDEPATH
+TEMPLATE = app
+DESTDIR = $$BUILD_TREE/bin
 
-LIBS += -l$$qtLibraryName(QDbf)
+LIBS *= -l$$qtLibraryName(QDbf)
 
-HEADERS += mainwindow.h
-SOURCES += main.cpp \
+HEADERS += \
+    mainwindow.h
+SOURCES += \
+    main.cpp \
     mainwindow.cpp
+
+target.path = /bin
+INSTALLS += target

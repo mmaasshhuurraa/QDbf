@@ -130,7 +130,7 @@ Qt::ItemFlags QDbfTableModelPrivate::flags(const QModelIndex &index) const
         return flags;
     }
 
-    QVariant &value = m_records.at(index.row()).value(index.column());
+    QVariant value = m_records.at(index.row()).value(index.column());
 
     if (value.type() == QVariant::Bool) {
         flags |= Qt::ItemIsTristate;
@@ -179,7 +179,7 @@ QVariant QDbfTableModelPrivate::data(const QModelIndex &index, int role) const
         return QVariant();
     }
 
-    QVariant &value = m_records.at(index.row()).value(index.column());
+    QVariant value = m_records.at(index.row()).value(index.column());
 
     switch (role) {
     case Qt::DisplayRole:

@@ -1,13 +1,22 @@
+TEMPLATE = lib
+
 include(common.pri)
 
-TEMPLATE = lib
-CONFIG += dll
-
-DLLDESTDIR = $$BIN_PATH
-DESTDIR = $$LIBRARY_PATH
-
-isEmpty(TARGET) {
-    error("library.pri: You must provide a TARGET")
+win32 {
+    DLLDESTDIR = $$APP_PATH
 }
 
+DESTDIR = $$LIBRARY_PATH
+
 TARGET = $$qtLibraryTarget($$TARGET)
+
+CONFIG += dll
+
+win32 {
+    target.path = /bin
+    target.files = $$DLLDESTDIR/$${TARGET}.dll
+} else {
+    target.path = /$$LIBRARY_BASENAME/$$PROJECT_NAME
+}
+
+INSTALLS += target
