@@ -237,10 +237,12 @@ bool QDbfTablePrivate::open(QDbfTable::OpenMode openMode)
     m_fieldsCount  = fieldDescriptorsLength / FIELD_DESCRIPTOR_LENGTH;
 
     // Codepage
-    switch(headerData.at(LANGUAGE_DRIVER_OFFSET)) {
+    const quint8 codepage = static_cast<quint8>(headerData.at(LANGUAGE_DRIVER_OFFSET));
+    switch(codepage) {
     case 0:
         m_codepage = QDbfTable::CodepageNotSet;
         break;
+    case 38:
     case 101:
         m_codepage = QDbfTable::IBM866;
         break;
@@ -272,8 +274,8 @@ bool QDbfTablePrivate::open(QDbfTable::OpenMode openMode)
             fieldName.append(m_textCodec->toUnicode(&fieldNameChar, 1));
         }
 
-        QVariant::Type fieldType;
-        QDbfField::QDbfType fieldQDbfType;
+        QVariant::Type fieldType = QVariant::Invalid;
+        QDbfField::QDbfType fieldQDbfType = QDbfField::UnknownDataType;
         quint8 fieldTypeChar = static_cast<quint8>(fieldDescriptorsData.at(i + FIELD_NAME_LENGTH) & 0xFF);
         switch (fieldTypeChar) {
         case 67: // C
@@ -299,8 +301,6 @@ bool QDbfTablePrivate::open(QDbfTable::OpenMode openMode)
             fieldType = QVariant::Double;
             fieldQDbfType = QDbfField::Number;
             break;
-        default:
-            fieldType = QVariant::Invalid;
         }
 
         const int fieldLength = static_cast<int>(fieldDescriptorsData.at(i + FIELD_LENGTH_OFFSET) & 0xFF);
@@ -682,7 +682,7 @@ QByteArray QDbfTablePrivate::recordData(const QDbfRecord &record, bool addEndOfF
     for (int i = 0; i < m_record.count(); ++i) {
         if (m_record.field(i).d != record.field(i).d) {
             m_error = QDbfTable::UnspecifiedError;
-            return false;
+            return data;
         }
         switch (record.field(i).dbfType()) {
         case QDbfField::Character:

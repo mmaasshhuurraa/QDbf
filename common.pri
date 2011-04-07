@@ -1,5 +1,3 @@
-CONFIG += qt warn-on
-
 defineReplace(cleanPath) {
     win32:1 ~= s|\\\\|/|g
     contains(1, ^/.*):pfx = /
