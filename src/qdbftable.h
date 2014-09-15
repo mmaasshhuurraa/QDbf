@@ -9,9 +9,7 @@ QT_END_NAMESPACE
 
 namespace QDbf {
 namespace Internal {
-
 class QDbfTablePrivate;
-
 } // namespace Internal
 
 class QDbfRecord;

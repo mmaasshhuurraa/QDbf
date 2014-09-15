@@ -3,14 +3,13 @@
 
 #include "qdbf_global.h"
 
-#include <QtCore/QVariant>
+#include <QVariant>
 
 namespace QDbf {
-
 namespace Internal {
-    class QDbfFieldPrivate;
-    class QDbfTablePrivate;
-}
+class QDbfFieldPrivate;
+class QDbfTablePrivate;
+} // namespace Internal
 
 class QDBF_EXPORT QDbfField
 {

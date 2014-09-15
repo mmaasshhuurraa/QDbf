@@ -1,5 +1,3 @@
-TEMPLATE = lib
-
 include(common.pri)
 
 win32 {
@@ -8,15 +6,21 @@ win32 {
 
 DESTDIR = $$LIBRARY_PATH
 
-TARGET = $$qtLibraryTarget($$TARGET)
+include(rpath.pri)
 
-CONFIG += dll
+TARGET = $$qtLibraryName($$TARGET)
 
-win32 {
-    target.path = /bin
-    target.files = $$DLLDESTDIR/$${TARGET}.dll
-} else {
-    target.path = /$$LIBRARY_BASENAME/$$PROJECT_NAME
+TEMPLATE = lib
+CONFIG += shared dll
+
+contains(QT_CONFIG, reduce_exports):CONFIG += hide_symbols
+
+!macx {
+    win32 {
+        dlltarget.path = /bin
+        INSTALLS += dlltarget
+    } else {
+        target.path = /$$LIBRARY_BASENAME
+        INSTALLS += target
+    }
 }
-
-INSTALLS += target

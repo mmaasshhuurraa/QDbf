@@ -3,7 +3,7 @@
 #include "qdbffield.h"
 #include "qdbfrecord.h"
 
-#include <QtCore/QDebug>
+#include <QDebug>
 
 #define DBF_PREFETCH 255
 
@@ -45,12 +45,6 @@ public:
     int m_deletedRecordsCount;
     int m_lastRecordIndex;
 };
-
-} // namespace Internal
-} // namespace QDbf
-
-using namespace QDbf;
-using namespace QDbf::Internal;
 
 QDbfTableModelPrivate::QDbfTableModelPrivate() :
     q(0),
@@ -287,16 +281,18 @@ void QDbfTableModelPrivate::fetchMore(const QModelIndex &index)
     q->endInsertRows();
 }
 
+} // namespace Internal
+
 QDbfTableModel::QDbfTableModel(QObject *parent) :
     QAbstractTableModel(parent),
-    d(new QDbfTableModelPrivate())
+    d(new Internal::QDbfTableModelPrivate())
 {
     d->q = this;
 }
 
 QDbfTableModel::QDbfTableModel(const QString &filePath, QObject *parent) :
     QAbstractTableModel(parent),
-    d(new QDbfTableModelPrivate(filePath))
+    d(new Internal::QDbfTableModelPrivate(filePath))
 {
     d->q = this;
 }
@@ -370,3 +366,5 @@ void QDbfTableModel::fetchMore(const QModelIndex &index)
 {
     d->fetchMore(index);
 }
+
+} // namespace QDbf

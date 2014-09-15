@@ -1,5 +1,7 @@
 #include "qdbffield.h"
+
 #include "qdbfrecord.h"
+
 #include <QDebug>
 #include <QVariant>
 #include <QVector>
@@ -13,32 +15,33 @@ public:
     QDbfRecordPrivate();
     QDbfRecordPrivate(const QDbfRecordPrivate &other);
 
-    inline bool contains(int index) { return index >= 0 && index < fields.count(); }
+    inline bool contains(int index) { return index >= 0 && index < m_fields.count(); }
 
     QAtomicInt ref;
-    int index;
-    bool isDeleted;
-    QVector<QDbfField> fields;
+    int m_index;
+    bool m_isDeleted;
+    QVector<QDbfField> m_fields;
 };
 
-} // namespace Internal
-} // namespace QDbf
-
-using namespace QDbf;
-using namespace QDbf::Internal;
-
 QDbfRecordPrivate::QDbfRecordPrivate() :
-    ref(1), index(-1), isDeleted(false)
+    ref(1),
+    m_index(-1),
+    m_isDeleted(false)
 {
 }
 
 QDbfRecordPrivate::QDbfRecordPrivate(const QDbfRecordPrivate &other) :
-    ref(1), index(other.index), isDeleted(other.isDeleted), fields(other.fields)
+    ref(1),
+    m_index(other.m_index),
+    m_isDeleted(other.m_isDeleted),
+    m_fields(other.m_fields)
 {
 }
 
+} // namespace Internal
+
 QDbfRecord::QDbfRecord() :
-    d(new QDbfRecordPrivate())
+    d(new Internal::QDbfRecordPrivate())
 {
 }
 
@@ -59,7 +62,7 @@ bool QDbfRecord::operator==(const QDbfRecord &other) const
 {
     return (recordIndex() == other.recordIndex() &&
             isDeleted() == other.isDeleted() &&
-            d->fields == other.d->fields);
+            d->m_fields == other.d->m_fields);
 }
 
 QDbfRecord::~QDbfRecord()
@@ -71,12 +74,12 @@ QDbfRecord::~QDbfRecord()
 
 void QDbfRecord::setRecordIndex(int index)
 {
-    d->index = index;
+    d->m_index = index;
 }
 
 int QDbfRecord::recordIndex() const
 {
-    return d->index;
+    return d->m_index;
 }
 
 void QDbfRecord::setValue(int index, const QVariant &val)
@@ -86,12 +89,12 @@ void QDbfRecord::setValue(int index, const QVariant &val)
     }
 
     detach();
-    d->fields[index].setValue(val);
+    d->m_fields[index].setValue(val);
 }
 
 QVariant QDbfRecord::value(int index) const
 {
-    return d->fields.value(index).value();
+    return d->m_fields.value(index).value();
 }
 
 void QDbfRecord::setValue(const QString &name, const QVariant &val)
@@ -111,12 +114,12 @@ void QDbfRecord::setNull(int index)
     }
 
     detach();
-    d->fields[index].clear();
+    d->m_fields[index].clear();
 }
 
 bool QDbfRecord::isNull(int index) const
 {
-    return d->fields.value(index).isNull();
+    return d->m_fields.value(index).isNull();
 }
 
 void QDbfRecord::setNull(const QString &name)
@@ -134,7 +137,7 @@ int QDbfRecord::indexOf(const QString &name) const
     QString nm = name.toUpper();
 
     for (int i = 0; i < count(); ++i) {
-        if (d->fields.at(i).name().toUpper() == nm) return i;
+        if (d->m_fields.at(i).name().toUpper() == nm) return i;
     }
 
     return -1;
@@ -142,12 +145,12 @@ int QDbfRecord::indexOf(const QString &name) const
 
 QString QDbfRecord::fieldName(int index) const
 {
-    return d->fields.value(index).name();
+    return d->m_fields.value(index).name();
 }
 
 QDbfField QDbfRecord::field(int index) const
 {
-    return d->fields.value(index);
+    return d->m_fields.value(index);
 }
 
 QDbfField QDbfRecord::field(const QString &name) const
@@ -158,7 +161,7 @@ QDbfField QDbfRecord::field(const QString &name) const
 void QDbfRecord::append(const QDbfField &field)
 {
     detach();
-    d->fields.append(field);
+    d->m_fields.append(field);
 }
 
 void QDbfRecord::replace(int pos, const QDbfField &field)
@@ -168,13 +171,13 @@ void QDbfRecord::replace(int pos, const QDbfField &field)
     }
 
     detach();
-    d->fields[pos] = field;
+    d->m_fields[pos] = field;
 }
 
 void QDbfRecord::insert(int pos, const QDbfField &field)
 {
     detach();
-    d->fields.insert(pos, field);
+    d->m_fields.insert(pos, field);
 }
 
 void QDbfRecord::remove(int pos)
@@ -184,23 +187,23 @@ void QDbfRecord::remove(int pos)
     }
 
     detach();
-    d->fields.remove(pos);
+    d->m_fields.remove(pos);
 }
 
 bool QDbfRecord::isEmpty() const
 {
-    return d->fields.isEmpty();
+    return d->m_fields.isEmpty();
 }
 
 void QDbfRecord::setDeleted(bool deleted)
 {
     detach();
-    d->isDeleted = deleted;
+    d->m_isDeleted = deleted;
 }
 
 bool QDbfRecord::isDeleted() const
 {
-    return d->isDeleted;
+    return d->m_isDeleted;
 }
 
 bool QDbfRecord::contains(const QString &name) const
@@ -211,21 +214,21 @@ bool QDbfRecord::contains(const QString &name) const
 void QDbfRecord::clear()
 {
     detach();
-    d->fields.clear();
+    d->m_fields.clear();
 }
 
 void QDbfRecord::clearValues()
 {
     detach();
-    int count = d->fields.count();
+    int count = d->m_fields.count();
     for (int i = 0; i < count; ++i) {
-        d->fields[i].clear();
+        d->m_fields[i].clear();
     }
 }
 
 int QDbfRecord::count() const
 {
-    return d->fields.count();
+    return d->m_fields.count();
 }
 
 void QDbfRecord::detach()
@@ -233,7 +236,9 @@ void QDbfRecord::detach()
     qAtomicDetach(d);
 }
 
-QDebug operator<<(QDebug debug, const QDbfRecord &record)
+} // namespace QDbf
+
+QDebug operator<<(QDebug debug, const QDbf::QDbfRecord &record)
 {
     debug.nospace() << "QDbfRecord(" << record.count() << ')';
 

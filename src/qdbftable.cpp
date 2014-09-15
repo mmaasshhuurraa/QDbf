@@ -3,11 +3,11 @@
 #include "qdbfrecord.h"
 #include "qdbftable.h"
 
-#include <QtCore/QDate>
-#include <QtCore/QDebug>
-#include <QtCore/QFile>
-#include <QtCore/QTextCodec>
-#include <QtCore/QVarLengthArray>
+#include <QDate>
+#include <QDebug>
+#include <QFile>
+#include <QTextCodec>
+#include <QVarLengthArray>
 
 namespace QDbf {
 namespace Internal {
@@ -93,12 +93,6 @@ public:
     mutable QDbfRecord m_currentRecord;
     QDbfRecord m_record;
 };
-
-} // namespace Internal
-} // namespace QDbf
-
-using namespace QDbf;
-using namespace QDbf::Internal;
 
 QDbfTablePrivate::QDbfTablePrivate() :
     ref(1),
@@ -499,7 +493,7 @@ QDbfRecord QDbfTablePrivate::record() const
             value = byteArray.toDouble();
             break;
         case QVariant::Bool: {
-            QString val = QString::fromAscii(byteArray.toUpper());
+            QString val = QString::fromLatin1(byteArray.toUpper());
             if (val == QLatin1String("T") ||
                 val == QLatin1String("Y")) {
                 value = true;
@@ -676,9 +670,8 @@ void QDbfTablePrivate::setTextCodec()
 QByteArray QDbfTablePrivate::recordData(const QDbfRecord &record, bool addEndOfFileMark) const
 {
     QByteArray data;
-    // delete flag
     data.append(record.isDeleted() ? '*' : ' ');
-    // field
+
     for (int i = 0; i < m_record.count(); ++i) {
         if (m_record.field(i).d != record.field(i).d) {
             m_error = QDbfTable::UnspecifiedError;
@@ -689,34 +682,36 @@ QByteArray QDbfTablePrivate::recordData(const QDbfRecord &record, bool addEndOfF
             data.append(m_textCodec->fromUnicode(record.field(i).value().toString().leftJustified(record.field(i).length(), QLatin1Char(' '), true)));
             break;
         case QDbfField::Date:
-            data.append(record.field(i).value().toDate().toString(QString(QLatin1String("yyyyMMdd"))).leftJustified(record.field(i).length(), QLatin1Char(' '), true).toAscii());
+            data.append(record.field(i).value().toDate().toString(QString(QLatin1String("yyyyMMdd"))).leftJustified(record.field(i).length(), QLatin1Char(' '), true).toLatin1());
             break;
         case QDbfField::FloatingPoint:
         case QDbfField::Number:
-            data.append(QString(QLatin1String("%1")).arg(record.field(i).value().toDouble(), 0, 'f', record.field(i).precision()).rightJustified(record.field(i).length(), QLatin1Char(' '), true).toAscii());
+            data.append(QString(QLatin1String("%1")).arg(record.field(i).value().toDouble(), 0, 'f', record.field(i).precision()).rightJustified(record.field(i).length(), QLatin1Char(' '), true).toLatin1());
             break;
         case QDbfField::Logical:
             data.append(record.field(i).value().toBool() ? 'T' : 'F');
             break;
         default:
-            data.append(QString(QLatin1String("")).leftJustified(record.field(i).length(), QLatin1Char(' '), true).toAscii());
+            data.append(QString(QLatin1String("")).leftJustified(record.field(i).length(), QLatin1Char(' '), true).toLatin1());
         }
     }
 
     if (addEndOfFileMark) {
-        data.append(QChar(26).toAscii());
+        data.append(QChar(26).toLatin1());
     }
 
     return data;
 }
 
+} // namespace Internal
+
 QDbfTable::QDbfTable() :
-    d(new QDbfTablePrivate())
+    d(new Internal::QDbfTablePrivate())
 {
 }
 
 QDbfTable::QDbfTable(const QString &dbfFileName) :
-    d(new QDbfTablePrivate(dbfFileName))
+    d(new Internal::QDbfTablePrivate(dbfFileName))
 {
 }
 
@@ -863,7 +858,9 @@ bool QDbfTable::removeRecord(int index)
     return d->removeRecord(index);
 }
 
-QDebug operator<<(QDebug debug, const QDbfTable &table)
+} // namespace QDbf
+
+QDebug operator<<(QDebug debug, const QDbf::QDbfTable &table)
 {
     debug.nospace() << "QDbfTable("
                     << table.fileName() << ", "

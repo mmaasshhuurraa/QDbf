@@ -4,19 +4,16 @@
 #include "qdbf_global.h"
 #include "qdbftable.h"
 
-#include <QtCore/QAbstractTableModel>
+#include <QAbstractTableModel>
 
 namespace QDbf {
 namespace Internal {
-
 class QDbfTableModelPrivate;
-
 } // namespace Internal
 
 class QDBF_EXPORT QDbfTableModel : public QAbstractTableModel
 {
     Q_OBJECT
-
 public:
     explicit QDbfTableModel(QObject *parent = 0);
     QDbfTableModel(const QString &filePath, QObject *parent = 0);

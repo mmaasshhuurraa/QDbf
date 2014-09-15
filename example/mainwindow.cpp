@@ -2,18 +2,17 @@
 
 #include "qdbftablemodel.h"
 
-#include <QtCore/QCoreApplication>
-#include <QtCore/QDebug>
-#include <QtCore/QDir>
-#include <QtCore/QFileInfo>
-
-#include <QtGui/QFileDialog>
-#include <QtGui/QHBoxLayout>
-#include <QtGui/QLineEdit>
-#include <QtGui/QMessageBox>
-#include <QtGui/QPushButton>
-#include <QtGui/QTableView>
-#include <QtGui/QVBoxLayout>
+#include <QCoreApplication>
+#include <QDebug>
+#include <QDir>
+#include <QFileDialog>
+#include <QFileInfo>
+#include <QHBoxLayout>
+#include <QLineEdit>
+#include <QMessageBox>
+#include <QPushButton>
+#include <QTableView>
+#include <QVBoxLayout>
 
 const char * const SELECT_FILE_TEXT = "Select dbf file by clicking on the button ----->";
 

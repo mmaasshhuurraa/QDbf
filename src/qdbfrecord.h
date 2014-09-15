@@ -5,15 +5,15 @@
 
 QT_BEGIN_NAMESPACE
 class QString;
+class QVariant;
 QT_END_NAMESPACE
 
 namespace QDbf {
+namespace Internal {
+class QDbfRecordPrivate;
+}
 
 class QDbfField;
-
-namespace Internal {
-    class QDbfRecordPrivate;
-}
 
 class QDBF_EXPORT QDbfRecord
 {
