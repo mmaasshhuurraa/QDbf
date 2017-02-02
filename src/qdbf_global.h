@@ -9,5 +9,4 @@
 #  define QDBF_EXPORT Q_DECL_IMPORT
 #endif
 
-
 #endif // QDBF_GLOBAL_H

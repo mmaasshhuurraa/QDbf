@@ -17,4 +17,5 @@ HEADERS += \
     qdbfrecord.h \
     qdbftable.h \
     qdbftablemodel.h \
+    qdbf_compat.h \
     qdbf_global.h

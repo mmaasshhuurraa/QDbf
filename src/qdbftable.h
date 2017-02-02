@@ -4,6 +4,7 @@
 #include "qdbf_global.h"
 
 QT_BEGIN_NAMESPACE
+class QDate;
 class QVariant;
 QT_END_NAMESPACE
 
@@ -19,9 +20,13 @@ class QDBF_EXPORT QDbfTable
 public:
     enum Codepage {
         CodepageNotSet = 0,
+        IBM437,
+        IBM850,
         IBM866,
+        Windows1250,
         Windows1251,
-        UnspecifiedCodepage
+        Windows1252,
+        UnsupportedCodepage
     };
 
     enum OpenMode {
@@ -31,36 +36,32 @@ public:
 
     enum DbfTableError {
         NoError = 0,
-        OpenError,
-        ReadError,
-        WriteError,
-        PermissionsError,
-        UnspecifiedError
+        FileOpenError,
+        FileReadError,
+        FileWriteError,
+        InvalidValue,
+        InvalidIndexError,
+        InvalidTypeError,
+        UnsupportedFile
     };
 
     QDbfTable();
     explicit QDbfTable(const QString &dbfFileName);
-    QDbfTable(const QDbfTable &other);
-    bool operator==(const QDbfTable &other) const;
-    inline bool operator!=(const QDbfTable &other) const { return !operator==(other); }
-    QDbfTable &operator=(const QDbfTable &other);
     ~QDbfTable();
 
     bool open(const QString &fileName, OpenMode openMode = QDbfTable::ReadOnly);
     bool open(OpenMode openMode = QDbfTable::ReadOnly);
-
     void close();
 
     QString fileName() const;
-
     QDbfTable::OpenMode openMode() const;
-
     DbfTableError error() const;
 
     bool setCodepage(QDbfTable::Codepage codepage);
     QDbfTable::Codepage codepage() const;
 
     bool isOpen() const;
+
     int size() const;
     int at() const;
     bool previous() const;
@@ -68,16 +69,27 @@ public:
     bool first() const;
     bool last() const;
     bool seek(int index) const;
+
+    QDate lastUpdate() const;
+
+    bool setRecord(const QDbfRecord &record);
     QDbfRecord record() const;
-    QVariant value(int index) const;
+
+    bool setValue(int fieldIndex, const QVariant &value);
+    QVariant value(int fieldIndex) const;
+
+    bool setValue(const QString &name, const QVariant &value);
+    QVariant value(const QString &name) const;
 
     bool addRecord();
     bool addRecord(const QDbfRecord &record);
-    bool updateRecordInTable(const QDbfRecord &record);
+
     bool removeRecord(int index);
+    bool removeRecord();
 
 private:
-    Internal::QDbfTablePrivate *d;
+    Q_DISABLE_COPY(QDbfTable)
+    Internal::QDbfTablePrivate *const d;
 };
 
 } // namespace QDbf

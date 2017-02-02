@@ -15,8 +15,6 @@ public:
     QDbfRecordPrivate();
     QDbfRecordPrivate(const QDbfRecordPrivate &other);
 
-    inline bool contains(int index) { return index >= 0 && index < m_fields.count(); }
-
     QAtomicInt ref;
     int m_index;
     bool m_isDeleted;
@@ -41,7 +39,7 @@ QDbfRecordPrivate::QDbfRecordPrivate(const QDbfRecordPrivate &other) :
 } // namespace Internal
 
 QDbfRecord::QDbfRecord() :
-    d(new Internal::QDbfRecordPrivate())
+  d(new Internal::QDbfRecordPrivate())
 {
 }
 
@@ -53,7 +51,10 @@ QDbfRecord::QDbfRecord(const QDbfRecord &other) :
 
 QDbfRecord &QDbfRecord::operator=(const QDbfRecord &other)
 {
-    if (this == &other) return *this;
+    if (this == &other) {
+        return *this;
+    }
+
     qAtomicAssign(d, other.d);
     return *this;
 }
@@ -63,6 +64,11 @@ bool QDbfRecord::operator==(const QDbfRecord &other) const
     return (recordIndex() == other.recordIndex() &&
             isDeleted() == other.isDeleted() &&
             d->m_fields == other.d->m_fields);
+}
+
+bool QDbfRecord::operator!=(const QDbfRecord& other) const
+{
+    return !operator==(other);
 }
 
 QDbfRecord::~QDbfRecord()
@@ -82,80 +88,82 @@ int QDbfRecord::recordIndex() const
     return d->m_index;
 }
 
-void QDbfRecord::setValue(int index, const QVariant &val)
+void QDbfRecord::setValue(int fieldIndex, const QVariant &value)
 {
-    if (!d->contains(index)) {
+    if (!contains(fieldIndex)) {
         return;
     }
 
     detach();
-    d->m_fields[index].setValue(val);
+    d->m_fields[fieldIndex].setValue(value);
 }
 
-QVariant QDbfRecord::value(int index) const
+QVariant QDbfRecord::value(int fieldIndex) const
 {
-    return d->m_fields.value(index).value();
+    return d->m_fields.value(fieldIndex).value();
 }
 
-void QDbfRecord::setValue(const QString &name, const QVariant &val)
+void QDbfRecord::setValue(const QString &fieldName, const QVariant &value)
 {
-    setValue(indexOf(name), val);
+    setValue(indexOf(fieldName), value);
 }
 
-QVariant QDbfRecord::value(const QString &name) const
+QVariant QDbfRecord::value(const QString &fieldName) const
 {
-    return value(indexOf(name));
+    return value(indexOf(fieldName));
 }
 
-void QDbfRecord::setNull(int index)
+void QDbfRecord::setNull(int fieldIndex)
 {
-    if (!d->contains(index)) {
+    if (!contains(fieldIndex)) {
         return;
     }
 
     detach();
-    d->m_fields[index].clear();
+    d->m_fields[fieldIndex].clear();
 }
 
-bool QDbfRecord::isNull(int index) const
+bool QDbfRecord::isNull(int fieldIndex) const
 {
-    return d->m_fields.value(index).isNull();
+    return d->m_fields.value(fieldIndex).isNull();
 }
 
-void QDbfRecord::setNull(const QString &name)
+void QDbfRecord::setNull(const QString &fieldName)
 {
-    setNull(indexOf(name));
+    setNull(indexOf(fieldName));
 }
 
-bool QDbfRecord::isNull(const QString &name) const
+bool QDbfRecord::isNull(const QString &fieldName) const
 {
-    return isNull(indexOf(name));
+    return isNull(indexOf(fieldName));
 }
 
-int QDbfRecord::indexOf(const QString &name) const
+int QDbfRecord::indexOf(const QString &fieldName) const
 {
-    QString nm = name.toUpper();
+    const QString &name = fieldName.toUpper();
 
     for (int i = 0; i < count(); ++i) {
-        if (d->m_fields.at(i).name().toUpper() == nm) return i;
+        if (d->m_fields.at(i).name().toUpper() == name) {
+            return i;
+        }
     }
 
     return -1;
 }
 
-QString QDbfRecord::fieldName(int index) const
+QString QDbfRecord::fieldName(int fieldIndex) const
 {
-    return d->m_fields.value(index).name();
+    return d->m_fields.value(fieldIndex).name();
 }
 
-QDbfField QDbfRecord::field(int index) const
+QDbfField QDbfRecord::field(int fieldIndex) const
 {
-    return d->m_fields.value(index);
+    return d->m_fields.value(fieldIndex);
 }
 
-QDbfField QDbfRecord::field(const QString &name) const
+QDbfField QDbfRecord::field(const QString &fieldName) const
 {
-    return field(indexOf(name));
+    return field(indexOf(fieldName));
 }
 
 void QDbfRecord::append(const QDbfField &field)
@@ -166,7 +174,7 @@ void QDbfRecord::append(const QDbfField &field)
 
 void QDbfRecord::replace(int pos, const QDbfField &field)
 {
-    if (!d->contains(pos)) {
+    if (!contains(pos)) {
         return;
     }
 
@@ -182,7 +190,7 @@ void QDbfRecord::insert(int pos, const QDbfField &field)
 
 void QDbfRecord::remove(int pos)
 {
-    if (!d->contains(pos)) {
+    if (!contains(pos)) {
         return;
     }
 
@@ -206,9 +214,14 @@ bool QDbfRecord::isDeleted() const
     return d->m_isDeleted;
 }
 
-bool QDbfRecord::contains(const QString &name) const
+bool QDbfRecord::contains(int fieldIndex) const
 {
-    return indexOf(name) >= 0;
+    return fieldIndex >= 0 && fieldIndex < d->m_fields.count();
+}
+
+bool QDbfRecord::contains(const QString &fieldName) const
+{
+    return (indexOf(fieldName) >= 0);
 }
 
 void QDbfRecord::clear()

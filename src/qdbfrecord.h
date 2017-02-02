@@ -21,30 +21,30 @@ public:
     QDbfRecord();
     QDbfRecord(const QDbfRecord &other);
     bool operator==(const QDbfRecord &other) const;
-    inline bool operator!=(const QDbfRecord &other) const { return !operator==(other); }
+    bool operator!=(const QDbfRecord &other) const;
     QDbfRecord &operator=(const QDbfRecord &other);
     ~QDbfRecord();
 
     void setRecordIndex(int index);
     int recordIndex() const;
 
-    void setValue(int i, const QVariant &val);
-    QVariant value(int i) const;
+    void setValue(int fieldIndex, const QVariant &value);
+    QVariant value(int fieldIndex) const;
 
-    void setValue(const QString &name, const QVariant &val);
-    QVariant value(const QString &name) const;
+    void setValue(const QString &fieldName, const QVariant &value);
+    QVariant value(const QString &fieldName) const;
 
-    void setNull(int i);
-    bool isNull(int i) const;
+    void setNull(int fieldIndex);
+    bool isNull(int fieldIndex) const;
 
-    void setNull(const QString &name);
-    bool isNull(const QString &name) const;
+    void setNull(const QString &fieldName);
+    bool isNull(const QString &fieldName) const;
 
-    int indexOf(const QString &name) const;
-    QString fieldName(int i) const;
+    int indexOf(const QString &fieldName) const;
+    QString fieldName(int fieldIndex) const;
 
-    QDbfField field(int i) const;
-    QDbfField field(const QString &name) const;
+    QDbfField field(int fieldIndex) const;
+    QDbfField field(const QString &fieldName) const;
 
     void append(const QDbfField &field);
     void replace(int pos, const QDbfField &field);
@@ -56,7 +56,8 @@ public:
     void setDeleted(bool deleted);
     bool isDeleted() const;
 
-    bool contains(const QString &name) const;
+    bool contains(int fieldIndex) const;
+    bool contains(const QString &fieldName) const;
     void clear();
     void clearValues();
     int count() const;

@@ -8,14 +8,13 @@ namespace Internal {
 class QDbfFieldPrivate
 {
 public:
-    QDbfFieldPrivate(const QString &name, QVariant::Type type);
+    QDbfFieldPrivate(const QString &name);
     QDbfFieldPrivate(const QDbfFieldPrivate &other);
     bool operator==(const QDbfFieldPrivate &other) const;
 
     QAtomicInt ref;
     QString m_name;
-    QVariant::Type m_type;
-    QDbfField::QDbfType m_dbfType;
+    QDbfField::QDbfType m_type;
     bool m_isReadOnly;
     int m_length;
     int m_precision;
@@ -23,11 +22,10 @@ public:
     QVariant m_defaultValue;
 };
 
-QDbfFieldPrivate::QDbfFieldPrivate(const QString &name, QVariant::Type type) :
+QDbfFieldPrivate::QDbfFieldPrivate(const QString &name) :
     ref(1),
     m_name(name),
-    m_type(type),
-    m_dbfType(QDbfField::UnknownDataType),
+    m_type(QDbfField::Undefined),
     m_isReadOnly(false),
     m_length(-1),
     m_precision(-1),
@@ -39,7 +37,6 @@ QDbfFieldPrivate::QDbfFieldPrivate(const QDbfFieldPrivate &other) :
     ref(1),
     m_name(other.m_name),
     m_type(other.m_type),
-    m_dbfType(other.m_dbfType),
     m_isReadOnly(other.m_isReadOnly),
     m_length(other.m_length),
     m_precision(other.m_precision),
@@ -52,7 +49,6 @@ bool QDbfFieldPrivate::operator==(const QDbfFieldPrivate &other) const
 {
     return (m_name == other.m_name &&
             m_type == other.m_type &&
-            m_dbfType == other.m_dbfType &&
             m_isReadOnly == other.m_isReadOnly &&
             m_length == other.m_length &&
             m_precision == other.m_precision &&
@@ -62,8 +58,8 @@ bool QDbfFieldPrivate::operator==(const QDbfFieldPrivate &other) const
 
 } // namespace Internal
 
-QDbfField::QDbfField(const QString &fieldName, QVariant::Type type) :
-    d(new Internal::QDbfFieldPrivate(fieldName, type))
+QDbfField::QDbfField(const QString &fieldName) :
+    d(new Internal::QDbfFieldPrivate(fieldName))
 {
 }
 
@@ -79,6 +75,11 @@ bool QDbfField::operator==(const QDbfField &other) const
     return ((d == other.d || *d == *other.d) && val == other.val);
 }
 
+bool QDbfField::operator!=(const QDbfField& other) const
+{
+    return !operator==(other);
+}
+
 QDbfField &QDbfField::operator=(const QDbfField &other)
 {
     if (this == &other) {
@@ -87,7 +88,6 @@ QDbfField &QDbfField::operator=(const QDbfField &other)
 
     qAtomicAssign(d, other.d);
     val = other.val;
-
     return *this;
 }
 
@@ -141,35 +141,24 @@ void QDbfField::clear()
         return;
     }
 
-    val = QVariant(type());
+    val = d->m_defaultValue;
 }
 
-void QDbfField::setType(QVariant::Type type)
+void QDbfField::setType(QDbfType type)
 {
     detach();
     d->m_type = type;
 }
 
-QVariant::Type QDbfField::type() const
+QDbfField::QDbfType QDbfField::type() const
 {
     return d->m_type;
 }
 
-void QDbfField::setQDbfType(QDbfType type)
+void QDbfField::setLength(int length)
 {
     detach();
-    d->m_dbfType = type;
-}
-
-QDbfField::QDbfType QDbfField::dbfType() const
-{
-    return d->m_dbfType;
-}
-
-void QDbfField::setLength(int fieldLength)
-{
-    detach();
-    d->m_length = fieldLength;
+    d->m_length = length;
 }
 
 int QDbfField::length() const
@@ -217,11 +206,35 @@ void QDbfField::detach()
 
 } // namespace QDbf
 
+QString typeToString(QDbf::QDbfField::QDbfType type)
+{
+    switch (type) {
+    case QDbf::QDbfField::Character:
+        return QLatin1String("Character");
+    case QDbf::QDbfField::Date:
+        return QLatin1String("Date");
+    case QDbf::QDbfField::DateTime:
+        return QLatin1String("DateTime");
+    case QDbf::QDbfField::FloatingPoint:
+        return QLatin1String("FloatingPoint");
+    case QDbf::QDbfField::Integer:
+        return QLatin1String("Integer");
+    case QDbf::QDbfField::Logical:
+        return QLatin1String("Logical");
+    case QDbf::QDbfField::Memo:
+        return QLatin1String("Memo");
+    case QDbf::QDbfField::Number:
+        return QLatin1String("Number");
+    default:
+        return QLatin1String("Undefined");
+    }
+}
+
 QDebug operator<<(QDebug debug, const QDbf::QDbfField &field)
 {
     debug.nospace() << "QDbfField("
                     << field.name() << ", "
-                    << QVariant::typeToName(field.type());
+                    << qPrintable(typeToString(field.type()));
 
     if (field.length() >= 0) {
         debug.nospace() << ", length: " << field.length();

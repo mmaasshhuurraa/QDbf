@@ -3,6 +3,10 @@
 
 #include <QMainWindow>
 
+QT_BEGIN_NAMESPACE
+class QAbstractButton;
+QT_END_NAMESPACE
+
 namespace Example {
 namespace Internal {
 
@@ -14,7 +18,6 @@ class MainWindowPrivate;
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
-
 public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
@@ -24,6 +27,11 @@ private:
 
 public slots:
     void openFile();
+
+private slots:
+    void processSelectionChanged();
+    void processButtonClicked(QAbstractButton *button);
+    void setLastUpdate();
 
     friend class Internal::MainWindowPrivate;
 };

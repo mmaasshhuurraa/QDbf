@@ -3,9 +3,10 @@
 #include "qdbffield.h"
 #include "qdbfrecord.h"
 
+#include <QDate>
 #include <QDebug>
 
-#define DBF_PREFETCH 255
+static const int DBF_PREFETCH = 255;
 
 namespace QDbf {
 namespace Internal {
@@ -17,25 +18,8 @@ public:
     QDbfTableModelPrivate(const QString &filePath);
     ~QDbfTableModelPrivate();
 
-    bool open(const QString &filePath, bool readOnly = false);
-    bool open(bool readOnly = false);
+    void clear();
 
-    int rowCount(const QModelIndex &index = QModelIndex()) const;
-    int columnCount(const QModelIndex &index = QModelIndex()) const;
-
-    Qt::ItemFlags flags(const QModelIndex &index) const;
-
-    bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole);
-    QVariant data(const QModelIndex &index, int role) const;
-
-    bool setHeaderData(int section, Qt::Orientation orientation,
-                       const QVariant &value, int role = Qt::DisplayRole);
-    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const;
-
-    bool canFetchMore(const QModelIndex &index = QModelIndex()) const;
-    void fetchMore(const QModelIndex &index = QModelIndex());
-
-    QDbfTableModel *q;
     QString m_filePath;
     bool m_readOnly;
     QDbfTable *const m_dbfTable;
@@ -47,8 +31,6 @@ public:
 };
 
 QDbfTableModelPrivate::QDbfTableModelPrivate() :
-    q(0),
-    m_filePath(QString::null),
     m_readOnly(false),
     m_dbfTable(new QDbfTable()),
     m_deletedRecordsCount(0),
@@ -57,7 +39,6 @@ QDbfTableModelPrivate::QDbfTableModelPrivate() :
 }
 
 QDbfTableModelPrivate::QDbfTableModelPrivate(const QString &filePath) :
-    q(0),
     m_filePath(filePath),
     m_readOnly(false),
     m_dbfTable(new QDbfTable()),
@@ -68,34 +49,55 @@ QDbfTableModelPrivate::QDbfTableModelPrivate(const QString &filePath) :
 
 QDbfTableModelPrivate::~QDbfTableModelPrivate()
 {
-    m_dbfTable->close();
-    delete m_dbfTable;
+  delete m_dbfTable;
 }
 
-bool QDbfTableModelPrivate::open(const QString &filePath, bool readOnly)
+void QDbfTableModelPrivate::clear()
 {
-    m_filePath = filePath;
-    return open(readOnly);
-}
-
-bool QDbfTableModelPrivate::open(bool readOnly)
-{
-    m_readOnly = readOnly;
+    m_readOnly = false;
     m_record = QDbfRecord();
     m_records.clear();
     m_headers.clear();
     m_deletedRecordsCount = 0;
     m_lastRecordIndex = -1;
+}
 
-    const QDbfTable::OpenMode &openMode = m_readOnly
-            ? QDbfTable::ReadOnly
-            : QDbfTable::ReadWrite;
+} // namespace Internal
 
-    if (!m_dbfTable->open(m_filePath, openMode)) {
+QDbfTableModel::QDbfTableModel(QObject *parent) :
+    QAbstractTableModel(parent),
+    d(new Internal::QDbfTableModelPrivate())
+{
+}
+
+QDbfTableModel::QDbfTableModel(const QString &filePath, QObject *parent) :
+    QAbstractTableModel(parent),
+    d(new Internal::QDbfTableModelPrivate(filePath))
+{
+}
+
+QDbfTableModel::~QDbfTableModel()
+{
+    delete d;
+}
+
+bool QDbfTableModel::open(const QString &filePath, bool readOnly)
+{
+    d->m_filePath = filePath;
+    return open(readOnly);
+}
+
+bool QDbfTableModel::open(bool readOnly)
+{
+    d->clear();
+    d->m_readOnly = readOnly;
+    const QDbfTable::OpenMode openMode = d->m_readOnly ? QDbfTable::ReadOnly : QDbfTable::ReadWrite;
+
+    if (!d->m_dbfTable->open(d->m_filePath, openMode)) {
         return false;
     }
 
-    m_record = m_dbfTable->record();
+    d->m_record = d->m_dbfTable->record();
 
     if (canFetchMore()) {
         fetchMore();
@@ -104,65 +106,38 @@ bool QDbfTableModelPrivate::open(bool readOnly)
     return true;
 }
 
-int QDbfTableModelPrivate::rowCount(const QModelIndex &index) const
+void QDbfTableModel::close()
 {
-    Q_UNUSED(index);
-    return m_records.count();
+    d->clear();
+    d->m_dbfTable->close();
 }
 
-int QDbfTableModelPrivate::columnCount(const QModelIndex &index) const
+bool QDbfTableModel::readOnly() const
 {
-    Q_UNUSED(index);
-    return m_record.count();
+    return d->m_readOnly;
 }
 
-Qt::ItemFlags QDbfTableModelPrivate::flags(const QModelIndex &index) const
+QDbfTable::DbfTableError QDbfTableModel::error() const
 {
-    Qt::ItemFlags flags = Qt::ItemIsEnabled | Qt::ItemIsSelectable;
-
-    if (!index.isValid()) {
-        return flags;
-    }
-
-    QVariant value = m_records.at(index.row()).value(index.column());
-
-    if (value.type() == QVariant::Bool) {
-        flags |= Qt::ItemIsTristate;
-    }
-
-    if (!m_readOnly) {
-        flags |= Qt::ItemIsEditable;
-    }
-
-    return flags;
+    return d->m_dbfTable->error();
 }
 
-bool QDbfTableModelPrivate::setData(const QModelIndex &index, const QVariant &value, int role)
+QDate QDbfTableModel::lastUpdate() const
 {
-    Q_UNUSED(value);
-
-    if (!m_dbfTable->isOpen()) {
-        return false;
-    }
-
-    if (index.isValid() && role == Qt::EditRole) {
-        QVariant oldValue = m_records.at(index.row()).value(index.column());
-        m_records[index.row()].setValue(index.column(), value);
-
-        if (!m_dbfTable->updateRecordInTable(m_records.at(index.row()))) {
-            m_records[index.row()].setValue(index.column(), oldValue);
-            return false;
-        }
-
-        emit q->dataChanged(index, index);
-
-        return true;
-    }
-
-    return false;
+    return d->m_dbfTable->lastUpdate();
 }
 
-QVariant QDbfTableModelPrivate::data(const QModelIndex &index, int role) const
+int QDbfTableModel::rowCount(const QModelIndex &) const
+{
+    return d->m_records.count();
+}
+
+int QDbfTableModel::columnCount(const QModelIndex &) const
+{
+    return d->m_record.count();
+}
+
+QVariant QDbfTableModel::data(const QModelIndex &index, int role) const
 {
     if (!index.isValid()) {
         return QVariant();
@@ -173,7 +148,7 @@ QVariant QDbfTableModelPrivate::data(const QModelIndex &index, int role) const
         return QVariant();
     }
 
-    QVariant value = m_records.at(index.row()).value(index.column());
+    const QVariant &value = d->m_records.at(index.row()).value(index.column());
 
     switch (role) {
     case Qt::DisplayRole:
@@ -196,39 +171,37 @@ QVariant QDbfTableModelPrivate::data(const QModelIndex &index, int role) const
     }
 }
 
-bool QDbfTableModelPrivate::setHeaderData(int section, Qt::Orientation orientation,
-                                          const QVariant &value, int role)
+bool QDbfTableModel::setHeaderData(int section, Qt::Orientation orientation, const QVariant &value, int role)
 {
     if (orientation != Qt::Horizontal || section < 0 || columnCount() <= section) {
         return false;
     }
 
-    if (m_headers.size() <= section) {
-        m_headers.resize(qMax(section + 1, 16));
+    if (d->m_headers.size() <= section) {
+        d->m_headers.resize(qMax(section + 1, 16));
     }
 
-    m_headers[section][role] = value;
+    d->m_headers[section][role] = value;
 
-    emit q->headerDataChanged(orientation, section, section);
-
+    emit headerDataChanged(orientation, section, section);
     return true;
 }
 
-QVariant QDbfTableModelPrivate::headerData(int section, Qt::Orientation orientation, int role) const
+QVariant QDbfTableModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
     if (orientation == Qt::Horizontal) {
-        QVariant value = m_headers.value(section).value(role);
+        QVariant value = d->m_headers.value(section).value(role);
 
         if (role == Qt::DisplayRole && !value.isValid()) {
-            value = m_headers.value(section).value(Qt::EditRole);
+            value = d->m_headers.value(section).value(Qt::EditRole);
         }
 
         if (value.isValid()) {
             return value;
         }
 
-        if (role == Qt::DisplayRole && m_record.count() > section) {
-            return m_record.fieldName(section);
+        if (role == Qt::DisplayRole && d->m_record.count() > section) {
+            return d->m_record.fieldName(section);
         }
     }
 
@@ -239,132 +212,181 @@ QVariant QDbfTableModelPrivate::headerData(int section, Qt::Orientation orientat
     return QVariant();
 }
 
-bool QDbfTableModelPrivate::canFetchMore(const QModelIndex &index) const
+bool QDbfTableModel::insertRows(int row, int count, const QModelIndex &)
 {
-    if (!index.isValid() && m_dbfTable->isOpen() &&
-        (m_records.size() + m_deletedRecordsCount < m_dbfTable->size())) {
+    if (row != d->m_records.size()) {
+        qWarning() << "Rows can be inserted only into the end of the table";
+        return false;
+    }
+
+    QVector<QDbfRecord> records;
+    records.reserve(count);
+    bool result = true;
+    for (int i = 0; i < count; ++i) {
+        if (!d->m_dbfTable->addRecord()) {
+            result = false;
+            break;
+        }
+        d->m_dbfTable->last();
+        records.append(d->m_dbfTable->record());
+    }
+
+    const bool showRows = (d->m_records.size() + records.size() + d->m_deletedRecordsCount == d->m_dbfTable->size());
+
+    if (showRows) {
+        beginInsertRows(QModelIndex(), row, row + records.size() - 1);
+        d->m_records.reserve(records.size());
+#if QT_VERSION < 0x050000
+        for (int i = 0; i < records.size(); ++i) {
+            d->m_records.append(records.at(i));
+        }
+#else
+        d->m_records.append(records);
+#endif
+        endInsertRows();
+    }
+
+    return result;
+}
+
+bool QDbfTableModel::insertRow(int row, const QModelIndex& index)
+{
+    return insertRows(row, 1, index);
+}
+
+bool QDbfTableModel::removeRows(int row, int count, const QModelIndex &)
+{
+    if (row >= d->m_records.size() || row + count <= 0) {
+        return false;
+    }
+
+    int beginRow = qMax(0, row);
+    int endRow = qMin(row + count - 1, d->m_records.size() - 1);
+
+    int lastRemovedRow = -1;
+    bool result = true;
+    for (int i = beginRow; i <= endRow; ++i) {
+        const int recordIndex = d->m_records.at(i).recordIndex();
+        if (!d->m_dbfTable->removeRecord(recordIndex)) {
+            result = false;
+            break;
+        }
+        lastRemovedRow = i;
+    }
+
+    if (lastRemovedRow > -1) {
+        beginRemoveRows(QModelIndex(), beginRow, lastRemovedRow);
+
+        for (int i = beginRow; i <= lastRemovedRow; ++i) {
+            d->m_records.remove(i);
+        }
+
+        d->m_deletedRecordsCount += lastRemovedRow - beginRow + 1;
+
+        endRemoveRows();
+    }
+
+    return result;
+}
+
+bool QDbfTableModel::removeRow(int row, const QModelIndex& index)
+{
+    return removeRows(row, 1, index);
+}
+
+Qt::ItemFlags QDbfTableModel::flags(const QModelIndex &index) const
+{
+    Qt::ItemFlags flags = Qt::ItemIsEnabled | Qt::ItemIsSelectable;
+
+    if (!index.isValid()) {
+        return flags;
+    }
+
+    const QVariant &value = d->m_records.at(index.row()).value(index.column());
+
+    if (value.type() == QVariant::Bool) {
+        flags |= Qt::ItemIsTristate;
+    }
+
+    if (!d->m_readOnly) {
+        flags |= Qt::ItemIsEditable;
+    }
+
+    return flags;
+}
+
+bool QDbfTableModel::setData(const QModelIndex &index, const QVariant &value, int role)
+{
+    if (!d->m_dbfTable->isOpen()) {
+        return false;
+    }
+
+    if (index.isValid() && role == Qt::EditRole) {
+        const int recordIndex = d->m_records.at(index.row()).recordIndex();
+        if (!d->m_dbfTable->seek(recordIndex)) {
+            return false;
+        }
+
+        if (!d->m_dbfTable->setValue(index.column(), value)) {
+            return false;
+        }
+
+        d->m_records[index.row()].setValue(index.column(), value);
+
+        emit dataChanged(index, index);
         return true;
     }
 
     return false;
 }
 
-void QDbfTableModelPrivate::fetchMore(const QModelIndex &index)
+bool QDbfTableModel::canFetchMore(const QModelIndex &) const
 {
-    if (index.isValid()) {
+    if (d->m_dbfTable->isOpen() && (d->m_records.size() + d->m_deletedRecordsCount < d->m_dbfTable->size())) {
+        return true;
+    }
+
+    return false;
+}
+
+void QDbfTableModel::fetchMore(const QModelIndex &)
+{
+    if (!d->m_dbfTable->seek(d->m_lastRecordIndex)) {
         return;
     }
 
-    if (!m_dbfTable->seek(m_lastRecordIndex)) {
-        return;
-    }
+    const int fetchSize = qMin(d->m_dbfTable->size() - d->m_records.size() - d->m_deletedRecordsCount, DBF_PREFETCH);
 
-    const int fetchSize = qMin(m_dbfTable->size() - m_records.count() -
-                               m_deletedRecordsCount, DBF_PREFETCH);
-
-    q->beginInsertRows(index, m_records.size() + 1, m_records.size() + fetchSize);
-
-    int fetchedRecordsCount = 0;
-    while (m_dbfTable->next()) {
-        const QDbfRecord record(m_dbfTable->record());
+    QVector<QDbfRecord> records;
+    records.reserve(fetchSize);
+    int deletedRecordsCount = 0;
+    int fetchedRecordSize = 0;
+    while (d->m_dbfTable->next()) {
+        const QDbfRecord record(d->m_dbfTable->record());
         if (record.isDeleted()) {
-            ++m_deletedRecordsCount;
+            ++deletedRecordsCount;
             continue;
         }
-        m_records.append(record);
-        m_lastRecordIndex = m_dbfTable->at();
-        if (++fetchedRecordsCount >= fetchSize) {
+        records.append(record);
+        if (++fetchedRecordSize == fetchSize) {
             break;
         }
     }
+    d->m_lastRecordIndex = d->m_dbfTable->at();
 
-    q->endInsertRows();
-}
+    beginInsertRows(QModelIndex(), d->m_records.size(), d->m_records.size() + records.size() - 1);
 
-} // namespace Internal
+    d->m_records.reserve(records.count());
+#if QT_VERSION < 0x050000
+    for (int i = 0; i < records.size(); ++i) {
+        d->m_records.append(records.at(i));
+    }
+#else
+    d->m_records.append(records);
+#endif
+    d->m_deletedRecordsCount += deletedRecordsCount;
 
-QDbfTableModel::QDbfTableModel(QObject *parent) :
-    QAbstractTableModel(parent),
-    d(new Internal::QDbfTableModelPrivate())
-{
-    d->q = this;
-}
-
-QDbfTableModel::QDbfTableModel(const QString &filePath, QObject *parent) :
-    QAbstractTableModel(parent),
-    d(new Internal::QDbfTableModelPrivate(filePath))
-{
-    d->q = this;
-}
-
-QDbfTableModel::~QDbfTableModel()
-{
-    delete d;
-}
-
-bool QDbfTableModel::open(const QString &filePath, bool readOnly)
-{
-    return d->open(filePath, readOnly);
-}
-
-bool QDbfTableModel::open(bool readOnly)
-{
-    return d->open(readOnly);
-}
-
-bool QDbfTableModel::readOnly() const
-{
-    return d->m_readOnly;
-}
-
-QDbfTable::DbfTableError QDbfTableModel::error() const
-{
-    return d->m_dbfTable->error();
-}
-
-int QDbfTableModel::rowCount(const QModelIndex &index) const
-{
-    return d->rowCount(index);
-}
-
-int QDbfTableModel::columnCount(const QModelIndex &index) const
-{
-    return d->columnCount(index);
-}
-
-QVariant QDbfTableModel::data(const QModelIndex &index, int role) const
-{
-    return d->data(index, role);
-}
-
-bool QDbfTableModel::setHeaderData(int section, Qt::Orientation orientation, const QVariant &value, int role)
-{
-    return d->setHeaderData(section, orientation, value, role);
-}
-
-QVariant QDbfTableModel::headerData(int section, Qt::Orientation orientation, int role) const
-{
-    return d->headerData(section, orientation, role);
-}
-
-Qt::ItemFlags QDbfTableModel::flags(const QModelIndex &index) const
-{
-    return d->flags(index);
-}
-
-bool QDbfTableModel::setData(const QModelIndex &index, const QVariant &value, int role)
-{
-    return d->setData(index, value, role);
-}
-
-bool QDbfTableModel::canFetchMore(const QModelIndex &index) const
-{
-    return d->canFetchMore(index);
-}
-
-void QDbfTableModel::fetchMore(const QModelIndex &index)
-{
-    d->fetchMore(index);
+    endInsertRows();
 }
 
 } // namespace QDbf

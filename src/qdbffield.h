@@ -14,22 +14,24 @@ class QDbfTablePrivate;
 class QDBF_EXPORT QDbfField
 {
 public:
-    QDbfField(const QString &fieldName = QString::null, QVariant::Type type = QVariant::Invalid);
+    explicit QDbfField(const QString &fieldName = QLatin1String(""));
     QDbfField(const QDbfField &other);
     bool operator==(const QDbfField &other) const;
-    inline bool operator!=(const QDbfField &other) const { return !operator==(other); }
+    bool operator!=(const QDbfField &other) const;
     QDbfField &operator=(const QDbfField &other);
     ~QDbfField();
 
     enum QDbfType
     {
-        UnknownDataType = -1,
+        Undefined = -1,
         Character,
         Date,
         FloatingPoint,
         Logical,
-        //Memo,
-        Number
+        Memo,
+        Number,
+        Integer,
+        DateTime
     };
 
     void setValue(const QVariant &value);
@@ -45,13 +47,10 @@ public:
 
     void clear();
 
-    void setType(QVariant::Type type);
-    QVariant::Type type() const;
+    void setType(QDbfType type);
+    QDbfType type() const;
 
-    void setQDbfType(QDbfType type);
-    QDbfType dbfType() const;
-
-    void setLength(int fieldLength);
+    void setLength(int length);
     int length() const;
 
     void setPrecision(int precision);
