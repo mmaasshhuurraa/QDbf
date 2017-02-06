@@ -3,14 +3,15 @@ dist: trusty
 language: cpp
 compiler: gcc
 env:
-- QT="qt4"
-- QT="qt5"
-before_install:
+- QT=4
+- QT=5
+install:
   - sudo apt-get update -qq
-  - sudo apt-get install -qq libqt4-dev qt4-qmake qt5-qmake qtbase5-dev
+  - if [ "$QT" = "4" ]; then sudo apt-get install -qq libqt4-dev qt4-qmake; fi
+  - if [ "$QT" = "5" ]; then sudo apt-get install -qq qtbase5-dev qt5-qmake; fi
 script:
   - mkdir build
   - cd build
-  - qmake qt=${QT} -v
-  - qmake qt=${QT} ..
+  - qmake -v
+  - qmake ..
   - make
