@@ -236,7 +236,7 @@ bool QDbfTableModel::insertRows(int row, int count, const QModelIndex &)
     if (showRows) {
         beginInsertRows(QModelIndex(), row, row + records.size() - 1);
         d->m_records.reserve(records.size());
-#if QT_VERSION < 0x050000
+#if QT_VERSION < 0x050500
         for (int i = 0; i < records.size(); ++i) {
             d->m_records.append(records.at(i));
         }
@@ -377,7 +377,7 @@ void QDbfTableModel::fetchMore(const QModelIndex &)
     beginInsertRows(QModelIndex(), d->m_records.size(), d->m_records.size() + records.size() - 1);
 
     d->m_records.reserve(records.count());
-#if QT_VERSION < 0x050000
+#if QT_VERSION < 0x050500
     for (int i = 0; i < records.size(); ++i) {
         d->m_records.append(records.at(i));
     }

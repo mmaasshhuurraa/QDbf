@@ -525,7 +525,7 @@ bool QDbfTablePrivate::setValue(int fieldIndex, const QVariant& value)
                    .leftJustified(m_record.field(fieldIndex).length(), QLatin1Char(FIELD_SPACER), true).toLatin1();
         } else if (m_record.field(fieldIndex).length() == 8) {
             const qint32 day = static_cast<qint32>(val.date().toJulianDay());
-#if QT_VERSION < 0x050000
+#if QT_VERSION < 0x050200
             const QTime time(0, 0, 0, 0);
             const qint32 msecs = time.msecsTo(val.time());
 #else
@@ -1090,7 +1090,7 @@ QDbfRecord QDbfTable::record() const
                 qint32 msecs;
                 stream >> msecs;
                 const QDate &date = QDate::fromJulianDay(day);
-#if QT_VERSION < 0x050000
+#if QT_VERSION < 0x050200
                 QTime time(0, 0, 0, 0);
                 time.addMSecs(msecs);
 #else
