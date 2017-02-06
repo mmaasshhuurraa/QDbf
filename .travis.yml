@@ -7,8 +7,8 @@ env:
 - QT=5
 install:
   - sudo apt-get update -qq
-  - if [ "$QT" = "4" ]; then sudo apt-get install -qq libqt4-dev qt4-qmake; fi
-  - if [ "$QT" = "5" ]; then sudo apt-get install -qq qtbase5-dev qt5-qmake; fi
+  - if [ "$QT" = "4" ]; then sudo apt-get install -qq libqt4-dev qt4-qmake qt4-default; fi
+  - if [ "$QT" = "5" ]; then sudo apt-get install -qq qtbase5-dev qt5-qmake qt5-default; fi
 script:
   - mkdir build
   - cd build
