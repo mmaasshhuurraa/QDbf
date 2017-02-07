@@ -4,6 +4,7 @@ clone_depth: 5
 init:
   - set QTDIR=C:\Qt\5.6\msvc2013
   - set PATH=%PATH%;%QTDIR%\bin;
+  - call "%VS120COMNTOOLS%\..\..\VC\vcvarsall.bat"
 build_script:
   - md build
   - cd build
