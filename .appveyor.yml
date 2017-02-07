@@ -1,0 +1,12 @@
+version: build{build}
+os: Visual Studio 2013
+clone_depth: 5
+init:
+  - set QTDIR=C:\Qt\5.6\msvc2013
+  - set PATH=%PATH%;%QTDIR%\bin;
+build_script:
+  - md build
+  - cd build
+  - qmake -v
+  - qmake ..
+  - nmake
