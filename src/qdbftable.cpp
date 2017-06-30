@@ -508,7 +508,7 @@ bool QDbfTablePrivate::setValue(int fieldIndex, const QVariant& value)
         break;
     case QDbfField::FloatingPoint:
     case QDbfField::Number:
-        data = QString(QLatin1String("%1")).arg(value.toDouble(), 0, 'f', m_record.field(fieldIndex).precision())
+        data = QString::number(value.toDouble(), 'f', m_record.field(fieldIndex).precision())
                .rightJustified(m_record.field(fieldIndex).length(), QLatin1Char(FIELD_SPACER), true).toLatin1();
         break;
     case QDbfField::Logical:
@@ -538,7 +538,7 @@ bool QDbfTablePrivate::setValue(int fieldIndex, const QVariant& value)
             }
 
             if (m_record.field(fieldIndex).length() == 10) {
-                data = QString(QLatin1String("%1")).arg(m_memoNextFreeBlockIndex)
+                data = QString::number(m_memoNextFreeBlockIndex)
                        .rightJustified(m_record.field(fieldIndex).length(), QLatin1Char(FIELD_SPACER), true).toLatin1();
             } else if (m_record.field(fieldIndex).length() == 4) {
                 QDataStream stream(&data, QIODevice::WriteOnly);
