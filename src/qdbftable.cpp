@@ -85,6 +85,28 @@ static const uchar FIELD_NAME_SPACER = 0x00;
 static const uchar END_OF_FILE_MARK = 0x1A;
 static const char END_OF_DBASE_MEMO_BLOCK[] = { 0x1A, 0x1A };
 
+static const qint8 DATE_LENGTH = 8;
+static const qint8 YEAR_OFFSET = 0;
+static const qint8 YEAR_LENGTH = 4;
+static const qint8 MONTH_OFFSET = 4;
+static const qint8 MONTH_LENGTH = 2;
+static const qint8 DAY_OFFSET = 6;
+static const qint8 DAY_LENGTH = 2;
+
+static const qint8 TIME_LENGTH = 6;
+static const qint8 HOUR_OFFSET = 0;
+static const qint8 HOUR_LENGTH = 2;
+static const qint8 MINUTE_OFFSET = 2;
+static const qint8 MINUTE_LENGTH = 2;
+static const qint8 SECOND_OFFSET = 4;
+static const qint8 SECOND_LENGTH = 2;
+
+static const qint8 DATETIME_LENGTH = 14;
+static const qint8 DATETIME_DATE_OFFSET = 0;
+static const qint8 DATETIME_TIME_OFFSET = 8;
+
+static const qint8 TIMESTAMP_LENGTH = 8;
+
 namespace QDbf {
 namespace Internal {
 
@@ -113,7 +135,7 @@ public:
     QVariant memoFieldValue(int index) const;
     QDataStream::ByteOrder memoByteOrder() const;
     bool setCodepage(QDbfTable::Codepage m_codepage);
-    bool checkType(int i, const QVariant &value) const;
+    bool isValueValid(int i, const QVariant &value) const;
     void setTextCodec();
     QDate dateFromByteArray(const QByteArray &byteArray) const;
     QTime timeFromByteArray(const QByteArray &byteArray) const;
@@ -359,7 +381,7 @@ bool QDbfTablePrivate::setCodepage(QDbfTable::Codepage codepage)
     return true;
 }
 
-bool QDbfTablePrivate::checkType(int i, const QVariant& value) const
+bool QDbfTablePrivate::isValueValid(int i, const QVariant& value) const
 {
     switch (m_currentRecord.field(i).type()) {
     case QDbfField::Character:
@@ -408,21 +430,21 @@ void QDbfTablePrivate::setTextCodec()
 
 QDate QDbfTablePrivate::dateFromByteArray(const QByteArray& byteArray) const
 {
-    Q_ASSERT(byteArray.length() == 8);
+    Q_ASSERT(byteArray.length() == DATE_LENGTH);
 
     bool ok = false;
 
-    const int y = byteArray.mid(0, 4).toInt(&ok);
+    const int y = byteArray.mid(YEAR_OFFSET, YEAR_LENGTH).toInt(&ok);
     if (!ok) {
         return QDate();
     }
 
-    const int m = byteArray.mid(4, 2).toInt(&ok);
+    const int m = byteArray.mid(MONTH_OFFSET, MONTH_LENGTH).toInt(&ok);
     if (!ok) {
         return QDate();
     }
 
-    const int d = byteArray.mid(6, 2).toInt(&ok);
+    const int d = byteArray.mid(DAY_OFFSET, DAY_LENGTH).toInt(&ok);
     if (!ok) {
         return QDate();
     }
@@ -432,21 +454,21 @@ QDate QDbfTablePrivate::dateFromByteArray(const QByteArray& byteArray) const
 
 QTime QDbfTablePrivate::timeFromByteArray(const QByteArray& byteArray) const
 {
-    Q_ASSERT(byteArray.length() == 6);
+    Q_ASSERT(byteArray.length() == TIME_LENGTH);
 
     bool ok = false;
 
-    const int h = byteArray.mid(0, 2).toInt(&ok);
+    const int h = byteArray.mid(HOUR_OFFSET, HOUR_LENGTH).toInt(&ok);
     if (!ok) {
         return QTime();
     }
 
-    const int m = byteArray.mid(2, 2).toInt(&ok);
+    const int m = byteArray.mid(MINUTE_OFFSET, MINUTE_LENGTH).toInt(&ok);
     if (!ok) {
         return QTime();
     }
 
-    const int s = byteArray.mid(4, 2).toInt(&ok);
+    const int s = byteArray.mid(SECOND_OFFSET, SECOND_LENGTH).toInt(&ok);
     if (!ok) {
         return QTime();
     }
@@ -466,7 +488,7 @@ bool QDbfTablePrivate::setValue(int fieldIndex, const QVariant& value)
         return false;
     }
 
-    if (!checkType(fieldIndex, value)) {
+    if (!isValueValid(fieldIndex, value)) {
         m_error = QDbfTable::InvalidTypeError;
         return false;
     }
@@ -543,10 +565,10 @@ bool QDbfTablePrivate::setValue(int fieldIndex, const QVariant& value)
         if (!val.isValid()) {
             m_error = QDbfTable::InvalidValue;
             return false;
-        } else if (m_record.field(fieldIndex).length() == 14) {
+        } else if (m_record.field(fieldIndex).length() == DATETIME_LENGTH) {
             data = val.toString(QLatin1String("yyyyMMddHHmmss"))
                    .leftJustified(m_record.field(fieldIndex).length(), QLatin1Char(FIELD_SPACER), true).toLatin1();
-        } else if (m_record.field(fieldIndex).length() == 8) {
+        } else if (m_record.field(fieldIndex).length() == TIMESTAMP_LENGTH) {
             const qint32 day = static_cast<qint32>(val.date().toJulianDay());
 #if QT_VERSION < 0x050200
             const QTime time(0, 0, 0, 0);
@@ -1101,11 +1123,11 @@ QDbfRecord QDbfTable::record() const
             break;
         }
         case QDbfField::DateTime: {
-            if (byteArray.length() == 14) {
-                const QDate &date = d->dateFromByteArray(byteArray.mid(0, 8));
-                const QTime &time = d->timeFromByteArray(byteArray.mid(8, 6));
+            if (byteArray.length() == DATETIME_LENGTH) {
+                const QDate &date = d->dateFromByteArray(byteArray.mid(DATETIME_DATE_OFFSET, DATE_LENGTH));
+                const QTime &time = d->timeFromByteArray(byteArray.mid(DATETIME_TIME_OFFSET, TIME_LENGTH));
                 value = QVariant(QDateTime(date, time));
-            } else if (byteArray.length() == 8) {
+            } else if (byteArray.length() == TIMESTAMP_LENGTH) {
                 QDataStream stream(byteArray);
                 stream.setByteOrder(QDataStream::LittleEndian);
                 qint32 day;
