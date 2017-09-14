@@ -865,7 +865,7 @@ bool QDbfTable::open(OpenMode openMode)
             break;
         case FIELD_TYPE_FLOATING_POINT:
             fieldType = QDbfField::FloatingPoint;
-            defaultValue = 0.00;
+            defaultValue = 0;
             break;
         case FIELD_TYPE_LOGICAL:
             fieldType = QDbfField::Logical;
@@ -1075,7 +1075,11 @@ QDbfRecord QDbfTable::record() const
             break;
         case QDbfField::FloatingPoint:
         case QDbfField::Number:
-            value = byteArray.toDouble();
+            if (d->m_record.field(i).precision() == 0) {
+                value = byteArray.trimmed().toInt();
+            } else {
+                value = byteArray.trimmed().toDouble();
+            }
             break;
         case QDbfField::Logical: {
             QString val = QString::fromLatin1(byteArray.toUpper());
