@@ -48,10 +48,7 @@ static const qint16 CODEPAGE_OFFSET = 29;
 static const qint16 FIELD_DESCRIPTOR_LENGTH = 32;
 static const qint16 FIELD_NAME_LENGTH = 10;
 static const qint16 FIELD_LENGTH_OFFSET = 16;
-static const qint16 FIELD_PRECISION_OFFSET = 17;
 
-static const qint16 MEMO_DESCRIPTOR_LENGTH = 8;
-static const qint16 MEMO_FIRST_RECORD_POSITION_OFFSET = 512;
 static const qint16 MEMO_BLOCK_LENGTH_OFFSET = 6;
 static const qint32 MEMO_DBT_BLOCK_LENGTH = 512;
 static const qint32 MEMO_SIGNATURE_TEXT = 1;
@@ -655,13 +652,13 @@ void QDbfTablePrivate::setLastUpdate()
         return;
     }
 
-    quint8 year = date.year() - (date.year() >= 2000 ? 2000 : 1900);
+    quint8 year = quint8(date.year() - (date.year() >= 2000 ? 2000 : 1900));
     stream << year;
 
-    quint8 month = date.month();
+    quint8 month = quint8(date.month());
     stream << month;
 
-    quint8 day = date.day();
+    quint8 day = quint8(date.day());
     stream << day;
 
     m_lastUpdate = date;
@@ -845,7 +842,7 @@ bool QDbfTable::open(OpenMode openMode)
         }
         QByteArray fieldName;
         for (qint16 j = 0; j <= FIELD_NAME_LENGTH; ++j) {
-            quint8 fieldNameChar;
+            qint8 fieldNameChar;
             stream >> fieldNameChar;
             if (fieldNameChar != FIELD_NAME_SPACER) {
                 fieldName.append(fieldNameChar);
