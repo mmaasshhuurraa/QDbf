@@ -1,6 +1,7 @@
 # QDbf - Qt DBF library
 [![Linux Build Status](https://travis-ci.org/IvanPinezhaninov/QDbf.svg?branch=master)](https://travis-ci.org/IvanPinezhaninov/QDbf)
 [![Windows Build Status](https://ci.appveyor.com/api/projects/status/github/IvanPinezhaninov/qdbf?svg=true)](https://ci.appveyor.com/project/IvanPinezhaninov/qdbf)
+[![LGPL v2.1 License](https://img.shields.io/badge/license-lgpl%20v2.1-blue.svg?style=flat)](https://www.gnu.org/licenses/lgpl-2.1)
 
 #### Example:
 ```c++
