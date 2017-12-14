@@ -70,6 +70,7 @@ static const uchar CODEPAGE_RUSSIAN_MSDOS = 0x65;
 static const uchar CODEPAGE_EASTERN_EUROPEAN_WINDOWS = 0xC8;
 static const uchar CODEPAGE_RUSSIAN_WINDOWS = 0xC9;
 static const uchar CODEPAGE_WINDOWS_ANSI_LATIN_1 = 0x03;
+static const uchar CODEPAGE_GB18030 = 0x7A;
 
 static const uchar LOGICAL_UNDEFINED = 0x3F; // ?
 static const uchar LOGICAL_YES = 0x59;       // Y
@@ -362,6 +363,9 @@ bool QDbfTablePrivate::setCodepage(QDbfTable::Codepage codepage)
     case QDbfTable::Windows1252:
         byte = CODEPAGE_WINDOWS_ANSI_LATIN_1;
         break;
+    case QDbfTable::GB18030:
+        byte = CODEPAGE_GB18030;
+        break;
     default:
         return false;
     }
@@ -418,6 +422,9 @@ void QDbfTablePrivate::setTextCodec()
         break;
     case QDbfTable::IBM866:
         m_textCodec = QTextCodec::codecForName("IBM 866");
+        break;
+    case QDbfTable::GB18030:
+        m_textCodec = QTextCodec::codecForName("GB18030");
         break;
     default:
         m_textCodec = QTextCodec::codecForLocale();
@@ -816,6 +823,9 @@ bool QDbfTable::open(OpenMode openMode)
         break;
     case CODEPAGE_RUSSIAN_WINDOWS:
         d->m_codepage = QDbfTable::Windows1251;
+        break;
+    case CODEPAGE_GB18030:
+        d->m_codepage = QDbfTable::GB18030;
         break;
     default:
         d->m_codepage = QDbfTable::UnsupportedCodepage;

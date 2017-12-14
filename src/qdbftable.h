@@ -26,6 +26,7 @@ public:
         Windows1250,
         Windows1251,
         Windows1252,
+        GB18030,
         UnsupportedCodepage
     };
 
