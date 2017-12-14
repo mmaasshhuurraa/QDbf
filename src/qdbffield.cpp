@@ -36,9 +36,9 @@ public:
     bool operator==(const QDbfFieldPrivate &other) const;
 
     QAtomicInt ref;
+    bool m_isReadOnly;
     QString m_name;
     QDbfField::QDbfType m_type;
-    bool m_isReadOnly;
     int m_length;
     int m_precision;
     int m_offset;
@@ -47,9 +47,9 @@ public:
 
 QDbfFieldPrivate::QDbfFieldPrivate(const QString &name) :
     ref(1),
+    m_isReadOnly(false),
     m_name(name),
     m_type(QDbfField::Undefined),
-    m_isReadOnly(false),
     m_length(-1),
     m_precision(-1),
     m_offset(0)
@@ -58,9 +58,9 @@ QDbfFieldPrivate::QDbfFieldPrivate(const QString &name) :
 
 QDbfFieldPrivate::QDbfFieldPrivate(const QDbfFieldPrivate &other) :
     ref(1),
+    m_isReadOnly(other.m_isReadOnly),
     m_name(other.m_name),
     m_type(other.m_type),
-    m_isReadOnly(other.m_isReadOnly),
     m_length(other.m_length),
     m_precision(other.m_precision),
     m_offset(other.m_offset),

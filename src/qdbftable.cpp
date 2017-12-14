@@ -141,42 +141,42 @@ public:
     void setLastUpdate();
 
     QString m_tableFileName;
-    mutable QDbfTable::DbfTableError m_error;
     mutable QFile m_tableFile;
     mutable QFile m_memoFile;
+    mutable QDbfTable::DbfTableError m_error;
     QDbfTable::OpenMode m_openMode;
     QTextCodec *m_textCodec;
-    bool m_dbc;
     QDbfMemoType m_memoType;
     QDate m_lastUpdate;
     QDbfTable::Codepage m_codepage;
     qint16 m_headerLength;
     qint16 m_recordLength;
     qint16 m_fieldsCount;
-    qint32 m_recordsCount;
-    qint32 m_memoNextFreeBlockIndex;
     qint16 m_memoBlockLength;
+    qint32 m_memoNextFreeBlockIndex;
+    qint32 m_recordsCount;
     mutable int m_currentIndex;
-    mutable bool m_bufered;
     mutable QDbfRecord m_currentRecord;
     QDbfRecord m_record;
+    mutable bool m_bufered;
+    bool m_dbc;
 };
 
 QDbfTablePrivate::QDbfTablePrivate() :
     m_error(QDbfTable::NoError),
     m_openMode(QDbfTable::ReadOnly),
     m_textCodec(QTextCodec::codecForLocale()),
-    m_dbc(false),
     m_memoType(QDbfTablePrivate::NoMemo),
     m_codepage(QDbfTable::CodepageNotSet),
     m_headerLength(-1),
     m_recordLength(-1),
     m_fieldsCount(-1),
-    m_recordsCount(-1),
-    m_memoNextFreeBlockIndex(-1),
     m_memoBlockLength(-1),
+    m_memoNextFreeBlockIndex(-1),
+    m_recordsCount(-1),
     m_currentIndex(-1),
-    m_bufered(false)
+    m_bufered(false),
+    m_dbc(false)
 {
 }
 
@@ -185,17 +185,17 @@ QDbfTablePrivate::QDbfTablePrivate(const QString &dbfFileName) :
     m_error(QDbfTable::NoError),
     m_openMode(QDbfTable::ReadOnly),
     m_textCodec(QTextCodec::codecForLocale()),
-    m_dbc(false),
     m_memoType(QDbfTablePrivate::NoMemo),
     m_codepage(QDbfTable::CodepageNotSet),
     m_headerLength(-1),
     m_recordLength(-1),
     m_fieldsCount(-1),
-    m_recordsCount(-1),
-    m_memoNextFreeBlockIndex(-1),
     m_memoBlockLength(-1),
+    m_memoNextFreeBlockIndex(-1),
+    m_recordsCount(-1),
     m_currentIndex(-1),
-    m_bufered(false)
+    m_bufered(false),
+    m_dbc(false)
 {
 }
 
@@ -575,8 +575,7 @@ bool QDbfTablePrivate::setValue(int fieldIndex, const QVariant& value)
         } else if (m_record.field(fieldIndex).length() == TIMESTAMP_LENGTH) {
             const qint32 day = static_cast<qint32>(val.date().toJulianDay());
 #if QT_VERSION < 0x050200
-            const QTime time(0, 0, 0, 0);
-            const qint32 msecs = time.msecsTo(val.time());
+            const qint32 msecs = QTime(0, 0, 0, 0).msecsTo(val.time());
 #else
             const qint32 msecs = static_cast<qint32>(val.time().msecsSinceStartOfDay());
 #endif
@@ -1147,8 +1146,7 @@ QDbfRecord QDbfTable::record() const
                 stream >> msecs;
                 const QDate &date = QDate::fromJulianDay(day);
 #if QT_VERSION < 0x050200
-                QTime time(0, 0, 0, 0);
-                time.addMSecs(msecs);
+                const QTime &time = QTime(0, 0, 0, 0).addMSecs(msecs);
 #else
                 const QTime &time = QTime::fromMSecsSinceStartOfDay(msecs);
 #endif

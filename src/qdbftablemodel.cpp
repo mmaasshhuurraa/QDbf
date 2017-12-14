@@ -44,29 +44,29 @@ public:
     void clear();
 
     QString m_filePath;
-    bool m_readOnly;
     QDbfTable *const m_dbfTable;
     QDbfRecord m_record;
     QVector<QDbfRecord> m_records;
     QVector<QHash<int, QVariant> > m_headers;
     int m_deletedRecordsCount;
     int m_lastRecordIndex;
+    bool m_readOnly;
 };
 
 QDbfTableModelPrivate::QDbfTableModelPrivate() :
-    m_readOnly(false),
     m_dbfTable(new QDbfTable()),
     m_deletedRecordsCount(0),
-    m_lastRecordIndex(-1)
+    m_lastRecordIndex(-1),
+    m_readOnly(false)
 {
 }
 
 QDbfTableModelPrivate::QDbfTableModelPrivate(const QString &filePath) :
     m_filePath(filePath),
-    m_readOnly(false),
     m_dbfTable(new QDbfTable()),
     m_deletedRecordsCount(0),
-    m_lastRecordIndex(-1)
+    m_lastRecordIndex(-1),
+    m_readOnly(false)
 {
 }
 
