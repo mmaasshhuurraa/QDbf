@@ -1,58 +1,23 @@
 !isEmpty(COMMON_PRI_INCLUDED):error("common.pri already included")
 COMMON_PRI_INCLUDED = 1
 
-# enable c++11
 isEqual(QT_MAJOR_VERSION, 5) {
-    CONFIG += c++11
-} else {
-    macx {
-        !macx-clang*: error("You need to use the macx-clang or macx-clang-libc++ mkspec to compile Qt Creator (call qmake with '-spec unsupported/macx-clang')")
-        QMAKE_CFLAGS += -mmacosx-version-min=10.7
-        QMAKE_CXXFLAGS += -std=c++11 -stdlib=libc++ -mmacosx-version-min=10.7
-        QMAKE_OBJECTIVE_CXXFLAGS += -std=c++11 -stdlib=libc++ -mmacosx-version-min=10.7
-        QMAKE_LFLAGS += -stdlib=libc++ -mmacosx-version-min=10.7
-    } else:linux-g++* {
-        QMAKE_CXXFLAGS += -std=c++0x
-    } else:linux-icc* {
-        QMAKE_CXXFLAGS += -std=c++11
-    } else:linux-clang* {
-        QMAKE_CXXFLAGS += -std=c++11
-        QMAKE_LFLAGS += -stdlib=libc++ -lc++abi
-    } else:win32-g++* {
-        QMAKE_CXXFLAGS += -std=c++0x
+    defineReplace(cleanPath) {
+        return($$clean_path($$1))
     }
-    # nothing to do for MSVC10+
-}
-
-isEqual(QT_MAJOR_VERSION, 5) {
-
-defineReplace(cleanPath) {
-    return($$clean_path($$1))
-}
-
-defineReplace(targetPath) {
-    return($$shell_path($$1))
-}
-
 } else {
-
-defineReplace(cleanPath) {
-    win32:1 ~= s|\\\\|/|g
-    contains(1, ^/.*):pfx = /
-    else:pfx =
-    segs = $$split(1, /)
-    out =
-    for(seg, segs) {
-        equals(seg, ..):out = $$member(out, 0, -2)
-        else:!equals(seg, .):out += $$seg
+    defineReplace(cleanPath) {
+        win32:1 ~= s|\\\\|/|g
+        contains(1, ^/.*):pfx = /
+        else:pfx =
+        segs = $$split(1, /)
+        out =
+        for(seg, segs) {
+            equals(seg, ..):out = $$member(out, 0, -2)
+            else:!equals(seg, .):out += $$seg
+        }
+        return($$join(out, /, $$pfx))
     }
-    return($$join(out, /, $$pfx))
-}
-
-defineReplace(targetPath) {
-    return($$replace(1, /, $$QMAKE_DIR_SEP))
-}
-
 }
 
 defineReplace(qtLibraryName) {
@@ -61,35 +26,11 @@ defineReplace(qtLibraryName) {
    CONFIG(debug, debug|release) {
       !debug_and_release|build_pass {
           mac:RET = $$member(LIBRARY_NAME, 0)_debug
-              else:win32:RET = $$member(LIBRARY_NAME, 0)d
+          else:win32:RET = $$member(LIBRARY_NAME, 0)d
       }
    }
    isEmpty(RET):RET = $$LIBRARY_NAME
    return($$RET)
-}
-
-isEqual(QT_MAJOR_VERSION, 5) {
-
-# For use in custom compilers which just copy files
-defineReplace(stripSrcDir) {
-    return($$relative_path($$absolute_path($$1, $$OUT_PWD), $$_PRO_FILE_PWD_))
-}
-
-} else {
-
-# For use in custom compilers which just copy files
-win32:i_flag = i
-defineReplace(stripSrcDir) {
-    win32 {
-        !contains(1, ^.:.*):1 = $$OUT_PWD/$$1
-    } else {
-        !contains(1, ^/.*):1 = $$OUT_PWD/$$1
-    }
-    out = $$cleanPath($$1)
-    out ~= s|^$$re_escape($$PWD/)||$$i_flag
-    return($$out)
-}
-
 }
 
 isEmpty(LIBRARY_BASENAME) {
@@ -104,13 +45,11 @@ isEmpty(BUILD_TREE) {
     BUILD_TREE ~= s,$$re_escape($$sub_dir)$,,
 }
 
-APP_PATH = $$BUILD_TREE/bin
-
 contains(TEMPLATE, vc.*):vcproj = 1
 LIBRARY_PATH = $$BUILD_TREE/$$LIBRARY_BASENAME
 !isEqual(SOURCE_TREE, $$BUILD_TREE):copydata = 1
 
-INCLUDEPATH += $$SOURCE_TREE/src
+INCLUDEPATH += $$SOURCE_TREE/include
 DEPENDPATH += $$INCLUDEPATH
 
 LIBS += -L$$LIBRARY_PATH
@@ -143,7 +82,6 @@ win32-msvc* {
 }
 
 qt:greaterThan(QT_MAJOR_VERSION, 4) {
-    contains(QT, core): QT += concurrent
     contains(QT, gui): QT += widgets
     DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x040900
 }

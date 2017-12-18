@@ -1,15 +1,16 @@
-include(../common.pri)
-
-TEMPLATE = app
 TARGET = QDbfExample
-DESTDIR = $$BUILD_TREE/bin
+TEMPLATE = app
 
-include(../rpath.pri)
+include(../common.pri)
+include(rpath.pri)
+
+DESTDIR = $$BUILD_TREE/bin
 
 LIBS *= -l$$qtLibraryName(QDbf)
 
 HEADERS += \
     mainwindow.h
+
 SOURCES += \
     main.cpp \
     mainwindow.cpp
