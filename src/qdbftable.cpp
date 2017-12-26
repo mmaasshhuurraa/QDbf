@@ -35,75 +35,75 @@
 #include <QFileInfo>
 #include <QTextCodec>
 
-static const qint16 DBC_LENGTH = 263;
-static const qint16 TERMINATOR_LENGTH = 1;
+static const quint16 DBC_LENGTH = 263;
+static const quint8 TERMINATOR_LENGTH = 1;
 
-static const qint16 TABLE_DESCRIPTOR_LENGTH = 32;
-static const qint16 TABLE_RECORDS_COUNT_OFFSET = 4;
-static const qint16 TABLE_LAST_UPDATE_OFFSET = 1;
-static const qint16 TABLE_FIRST_RECORD_POSITION_OFFSET = 8;
-static const qint16 RECORD_LENGTH_OFFSET = 10;
-static const qint16 CODEPAGE_OFFSET = 29;
+static const quint8 TABLE_DESCRIPTOR_LENGTH = 32;
+static const quint8 TABLE_RECORDS_COUNT_OFFSET = 4;
+static const quint8 TABLE_LAST_UPDATE_OFFSET = 1;
+static const quint8 TABLE_FIRST_RECORD_POSITION_OFFSET = 8;
+static const quint8 RECORD_LENGTH_OFFSET = 10;
+static const quint8 CODEPAGE_OFFSET = 29;
 
-static const qint16 FIELD_DESCRIPTOR_LENGTH = 32;
-static const qint16 FIELD_NAME_LENGTH = 10;
-static const qint16 FIELD_LENGTH_OFFSET = 16;
+static const quint8 FIELD_DESCRIPTOR_LENGTH = 32;
+static const quint8 FIELD_NAME_LENGTH = 10;
+static const quint8 FIELD_LENGTH_OFFSET = 16;
 
-static const qint16 MEMO_BLOCK_LENGTH_OFFSET = 6;
-static const qint32 MEMO_DBT_BLOCK_LENGTH = 512;
-static const qint32 MEMO_SIGNATURE_TEXT = 1;
+static const quint8 MEMO_BLOCK_LENGTH_OFFSET = 6;
+static const quint16 MEMO_DBT_BLOCK_LENGTH = 512;
+static const quint8 MEMO_SIGNATURE_TEXT = 1;
 
-static const uchar FIELD_TYPE_CHARACTER = 0x43;      // C
-static const uchar FIELD_TYPE_DATE = 0x44;           // D
-static const uchar FIELD_TYPE_FLOATING_POINT = 0x46; // F
-static const uchar FIELD_TYPE_LOGICAL = 0x4C;        // L
-static const uchar FIELD_TYPE_MEMO = 0x4D;           // M
-static const uchar FIELD_TYPE_NUMBER = 0x4E;         // N
-static const uchar FIELD_TYPE_INTEGER = 0x49;        // I
-static const uchar FIELD_TYPE_DATE_TIME = 0x54;      // T
+static const quint8 FIELD_TYPE_CHARACTER = 0x43;      // C
+static const quint8 FIELD_TYPE_DATE = 0x44;           // D
+static const quint8 FIELD_TYPE_FLOATING_POINT = 0x46; // F
+static const quint8 FIELD_TYPE_LOGICAL = 0x4C;        // L
+static const quint8 FIELD_TYPE_MEMO = 0x4D;           // M
+static const quint8 FIELD_TYPE_NUMBER = 0x4E;         // N
+static const quint8 FIELD_TYPE_INTEGER = 0x49;        // I
+static const quint8 FIELD_TYPE_DATE_TIME = 0x54;      // T
 
-static const uchar CODEPAGE_NOT_SET = 0x00;
-static const uchar CODEPAGE_US_MSDOS = 0x01;
-static const uchar CODEPAGE_INTERNATIONAL_MSDOD = 0x02;
-static const uchar CODEPAGE_RUSSIAN_OEM = 0x26;
-static const uchar CODEPAGE_RUSSIAN_MSDOS = 0x65;
-static const uchar CODEPAGE_EASTERN_EUROPEAN_WINDOWS = 0xC8;
-static const uchar CODEPAGE_RUSSIAN_WINDOWS = 0xC9;
-static const uchar CODEPAGE_WINDOWS_ANSI_LATIN_1 = 0x03;
-static const uchar CODEPAGE_GB18030 = 0x7A;
+static const quint8 CODEPAGE_NOT_SET = 0x00;
+static const quint8 CODEPAGE_US_MSDOS = 0x01;
+static const quint8 CODEPAGE_INTERNATIONAL_MSDOD = 0x02;
+static const quint8 CODEPAGE_RUSSIAN_OEM = 0x26;
+static const quint8 CODEPAGE_RUSSIAN_MSDOS = 0x65;
+static const quint8 CODEPAGE_EASTERN_EUROPEAN_WINDOWS = 0xC8;
+static const quint8 CODEPAGE_RUSSIAN_WINDOWS = 0xC9;
+static const quint8 CODEPAGE_WINDOWS_ANSI_LATIN_1 = 0x03;
+static const quint8 CODEPAGE_GB18030 = 0x7A;
 
-static const uchar LOGICAL_UNDEFINED = 0x3F; // ?
-static const uchar LOGICAL_YES = 0x59;       // Y
-static const uchar LOGICAL_NO = 0x4E;        // N
-static const uchar LOGICAL_TRUE = 0x54;      // T
-static const uchar LOGICAL_FALSE = 0x46;     // F
-static const uchar FIELD_DELETED = 0x2A;     // *
-static const uchar FIELD_SPACER = 0x20;
-static const uchar FIELD_NAME_SPACER = 0x00;
-static const uchar END_OF_FILE_MARK = 0x1A;
+static const quint8 LOGICAL_UNDEFINED = 0x3F; // ?
+static const quint8 LOGICAL_YES = 0x59;       // Y
+static const quint8 LOGICAL_NO = 0x4E;        // N
+static const quint8 LOGICAL_TRUE = 0x54;      // T
+static const quint8 LOGICAL_FALSE = 0x46;     // F
+static const quint8 FIELD_DELETED = 0x2A;     // *
+static const quint8 FIELD_SPACER = 0x20;
+static const quint8 FIELD_NAME_SPACER = 0x00;
+static const quint8 END_OF_FILE_MARK = 0x1A;
 static const char END_OF_DBASE_MEMO_BLOCK[] = { 0x1A, 0x1A };
 
-static const qint8 DATE_LENGTH = 8;
-static const qint8 YEAR_OFFSET = 0;
-static const qint8 YEAR_LENGTH = 4;
-static const qint8 MONTH_OFFSET = 4;
-static const qint8 MONTH_LENGTH = 2;
-static const qint8 DAY_OFFSET = 6;
-static const qint8 DAY_LENGTH = 2;
+static const quint8 DATE_LENGTH = 8;
+static const quint8 YEAR_OFFSET = 0;
+static const quint8 YEAR_LENGTH = 4;
+static const quint8 MONTH_OFFSET = 4;
+static const quint8 MONTH_LENGTH = 2;
+static const quint8 DAY_OFFSET = 6;
+static const quint8 DAY_LENGTH = 2;
 
-static const qint8 TIME_LENGTH = 6;
-static const qint8 HOUR_OFFSET = 0;
-static const qint8 HOUR_LENGTH = 2;
-static const qint8 MINUTE_OFFSET = 2;
-static const qint8 MINUTE_LENGTH = 2;
-static const qint8 SECOND_OFFSET = 4;
-static const qint8 SECOND_LENGTH = 2;
+static const quint8 TIME_LENGTH = 6;
+static const quint8 HOUR_OFFSET = 0;
+static const quint8 HOUR_LENGTH = 2;
+static const quint8 MINUTE_OFFSET = 2;
+static const quint8 MINUTE_LENGTH = 2;
+static const quint8 SECOND_OFFSET = 4;
+static const quint8 SECOND_LENGTH = 2;
 
-static const qint8 DATETIME_LENGTH = 14;
-static const qint8 DATETIME_DATE_OFFSET = 0;
-static const qint8 DATETIME_TIME_OFFSET = 8;
+static const quint8 DATETIME_LENGTH = 14;
+static const quint8 DATETIME_DATE_OFFSET = 0;
+static const quint8 DATETIME_TIME_OFFSET = 8;
 
-static const qint8 TIMESTAMP_LENGTH = 8;
+static const quint8 TIMESTAMP_LENGTH = 8;
 
 namespace QDbf {
 namespace Internal {
@@ -149,13 +149,13 @@ public:
     QDbfMemoType m_memoType;
     QDate m_lastUpdate;
     QDbfTable::Codepage m_codepage;
-    qint16 m_headerLength;
-    qint16 m_recordLength;
-    qint16 m_fieldsCount;
+    quint16 m_headerLength;
+    quint16 m_recordLength;
+    quint16 m_fieldsCount;
     qint16 m_memoBlockLength;
     qint32 m_memoNextFreeBlockIndex;
     qint32 m_recordsCount;
-    mutable int m_currentIndex;
+    mutable qint32 m_currentIndex;
     mutable QDbfRecord m_currentRecord;
     QDbfRecord m_record;
     mutable bool m_bufered;
@@ -168,13 +168,13 @@ QDbfTablePrivate::QDbfTablePrivate() :
     m_textCodec(QTextCodec::codecForLocale()),
     m_memoType(QDbfTablePrivate::NoMemo),
     m_codepage(QDbfTable::CodepageNotSet),
-    m_headerLength(-1),
-    m_recordLength(-1),
-    m_fieldsCount(-1),
-    m_memoBlockLength(-1),
-    m_memoNextFreeBlockIndex(-1),
-    m_recordsCount(-1),
-    m_currentIndex(-1),
+    m_headerLength(0),
+    m_recordLength(0),
+    m_fieldsCount(0),
+    m_memoBlockLength(0),
+    m_memoNextFreeBlockIndex(0),
+    m_recordsCount(0),
+    m_currentIndex(0),
     m_bufered(false),
     m_dbc(false)
 {
@@ -187,13 +187,13 @@ QDbfTablePrivate::QDbfTablePrivate(const QString &dbfFileName) :
     m_textCodec(QTextCodec::codecForLocale()),
     m_memoType(QDbfTablePrivate::NoMemo),
     m_codepage(QDbfTable::CodepageNotSet),
-    m_headerLength(-1),
-    m_recordLength(-1),
-    m_fieldsCount(-1),
-    m_memoBlockLength(-1),
-    m_memoNextFreeBlockIndex(-1),
-    m_recordsCount(-1),
-    m_currentIndex(-1),
+    m_headerLength(0),
+    m_recordLength(0),
+    m_fieldsCount(0),
+    m_memoBlockLength(0),
+    m_memoNextFreeBlockIndex(0),
+    m_recordsCount(0),
+    m_currentIndex(0),
     m_bufered(false),
     m_dbc(false)
 {
@@ -206,13 +206,13 @@ void QDbfTablePrivate::clear()
     m_dbc = false;
     m_memoType = QDbfTablePrivate::NoMemo;
     m_codepage = QDbfTable::CodepageNotSet;
-    m_headerLength = -1;
-    m_recordLength = -1;
-    m_fieldsCount = -1;
-    m_recordsCount = -1;
-    m_memoNextFreeBlockIndex = -1;
-    m_memoBlockLength = -1;
-    m_currentIndex = -1;
+    m_headerLength = 0;
+    m_recordLength = 0;
+    m_fieldsCount = 0;
+    m_recordsCount = 0;
+    m_memoNextFreeBlockIndex = 0;
+    m_memoBlockLength = 0;
+    m_currentIndex = 0;
     m_bufered = false;
     m_currentRecord = QDbfRecord();
     m_record = QDbfRecord();
@@ -573,7 +573,12 @@ bool QDbfTablePrivate::setValue(int fieldIndex, const QVariant& value)
             data = val.toString(QLatin1String("yyyyMMddHHmmss"))
                    .leftJustified(m_record.field(fieldIndex).length(), QLatin1Char(FIELD_SPACER), true).toLatin1();
         } else if (m_record.field(fieldIndex).length() == TIMESTAMP_LENGTH) {
-            const qint32 day = static_cast<qint32>(val.date().toJulianDay());
+            const qint64 julianDay = val.date().toJulianDay();
+            if (std::numeric_limits<qint32>::max() < julianDay) {
+                m_error = QDbfTable::InvalidValue;
+                return false;
+            }
+            const qint32 day = static_cast<qint32>(julianDay);
 #if QT_VERSION < 0x050200
             const qint32 msecs = QTime(0, 0, 0, 0).msecsTo(val.time());
 #else
@@ -631,7 +636,7 @@ bool QDbfTablePrivate::setValue(int fieldIndex, const QVariant& value)
         return false;
     }
 
-    if (m_tableFile.write(data) != static_cast<qint64>(data.length())) {
+    if (m_tableFile.write(data) != data.length()) {
         m_error = QDbfTable::FileWriteError;
         return false;
     }
@@ -763,9 +768,9 @@ bool QDbfTable::open(OpenMode openMode)
     }
 
     // Last update
-    qint8 y;
+    quint8 y;
     stream >> y;
-    qint16 year = (y < 80 ? 2000 : 1900) + y;
+    quint16 year = (y < 80 ? 2000 : 1900) + y;
     quint8 month;
     stream >> month;
     quint8 day;
@@ -777,7 +782,13 @@ bool QDbfTable::open(OpenMode openMode)
         d->m_error = QDbfTable::FileReadError;
         return false;
     }
-    stream >> d->m_recordsCount;
+    quint32 recordsCount = 0;
+    stream >> recordsCount;
+    if (std::numeric_limits<qint32>::max() < recordsCount) {
+        d->m_error = QDbfTable::FileReadError;
+        return false;
+    }
+    d->m_recordsCount = static_cast<qint32>(recordsCount);
 
     // Length of header structure
     if (!d->m_tableFile.seek(TABLE_FIRST_RECORD_POSITION_OFFSET)) {
@@ -833,7 +844,7 @@ bool QDbfTable::open(OpenMode openMode)
     d->setTextCodec();
 
 
-    qint16 fieldDescriptorsLength = d->m_headerLength - TABLE_DESCRIPTOR_LENGTH - TERMINATOR_LENGTH;
+    quint16 fieldDescriptorsLength = d->m_headerLength - TABLE_DESCRIPTOR_LENGTH - TERMINATOR_LENGTH;
     if (d->m_dbc) {
         fieldDescriptorsLength -= DBC_LENGTH;
     }
@@ -841,7 +852,7 @@ bool QDbfTable::open(OpenMode openMode)
     d->m_fieldsCount = fieldDescriptorsLength / FIELD_DESCRIPTOR_LENGTH;
 
     qint32 fieldOffset = 1;
-    for (qint16 i = 0; i < d->m_fieldsCount; ++i) {
+    for (quint16 i = 0; i < d->m_fieldsCount; ++i) {
         const qint32 fieldDescriptorOffset = static_cast<qint32>(FIELD_DESCRIPTOR_LENGTH) * i + TABLE_DESCRIPTOR_LENGTH;
 
         // Field name
@@ -850,7 +861,7 @@ bool QDbfTable::open(OpenMode openMode)
             return false;
         }
         QByteArray fieldName;
-        for (qint16 j = 0; j <= FIELD_NAME_LENGTH; ++j) {
+        for (quint8 j = 0; j <= FIELD_NAME_LENGTH; ++j) {
             qint8 fieldNameChar;
             stream >> fieldNameChar;
             if (fieldNameChar != FIELD_NAME_SPACER) {
@@ -998,7 +1009,7 @@ bool QDbfTable::last() const
 
 bool QDbfTable::seek(int index) const
 {
-    const int previousIndex = d->m_currentIndex;
+    const qint32 previousIndex = d->m_currentIndex;
 
     if (index < Internal::QDbfTablePrivate::FirstRow) {
         d->m_currentIndex = Internal::QDbfTablePrivate::BeforeFirstRow;
