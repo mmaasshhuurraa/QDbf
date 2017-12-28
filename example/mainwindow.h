@@ -29,6 +29,7 @@ public slots:
     void openFile();
 
 private slots:
+    void openArgFile();
     void processSelectionChanged();
     void processButtonClicked(QAbstractButton *button);
     void setLastUpdate();

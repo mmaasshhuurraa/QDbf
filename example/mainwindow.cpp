@@ -39,6 +39,7 @@
 #include <QPushButton>
 #include <QStatusBar>
 #include <QTableView>
+#include <QTimer>
 #include <QVBoxLayout>
 
 static const int MESSAGE_TIMEOUT = 1000;
@@ -72,6 +73,7 @@ public:
 
     void init();
     void openFile();
+    void openFile(const QString &file);
 
     MainWindow *q;
     QWidget *const m_centralWidget;
@@ -82,11 +84,11 @@ public:
     QLineEdit *const m_fileLocationEditor;
     QPushButton *const m_selectFileButton;
     QTableView *const m_tableView;
-    QDir m_dir;
     QDbf::QDbfTableModel *const m_model;
     QDialogButtonBox *const m_buttonBox;
     QPushButton *const m_addRowButton;
     QPushButton *const m_removeRowButton;
+    QDir m_dir;
 };
 
 } // namespace Internal
@@ -105,11 +107,11 @@ MainWindowPrivate::MainWindowPrivate() :
     m_fileLocationEditor(new QLineEdit()),
     m_selectFileButton(new QPushButton(QString::fromLatin1("..."), 0)),
     m_tableView(new QTableView()),
-    m_dir(QCoreApplication::applicationDirPath()),
     m_model(new QDbf::QDbfTableModel()),
     m_buttonBox(new QDialogButtonBox()),
     m_addRowButton(new QPushButton(trUtf8(ADD_ROW_BUTTON_TEXT))),
-    m_removeRowButton(new QPushButton(trUtf8(REMOVE_ROW_BUTTON_TEXT)))
+    m_removeRowButton(new QPushButton(trUtf8(REMOVE_ROW_BUTTON_TEXT))),
+    m_dir(QCoreApplication::applicationDirPath())
 {
 }
 
@@ -151,6 +153,7 @@ void MainWindowPrivate::init()
     q->connect(m_selectFileButton, SIGNAL(clicked()), SLOT(openFile()));
     m_fileLocationLayout->addWidget(m_selectFileButton);
 
+    q->connect(m_model, SIGNAL(dataChanged(QModelIndex,QModelIndex)), q, SLOT(setLastUpdate()));
     m_tableView->setModel(m_model);
     m_tableView->setSelectionMode(QAbstractItemView::SingleSelection);
     m_tableView->setSelectionBehavior(QAbstractItemView::SelectItems);
@@ -166,41 +169,43 @@ void MainWindowPrivate::init()
 
     m_removeRowButton->setToolTip(trUtf8(REMOVE_ROW_BUTTON_TOOL_TIP));
     m_removeRowButton->setEnabled(false);
+
+    QTimer::singleShot(100, q, SLOT(openArgFile()));
 }
 
 void MainWindowPrivate::openFile()
 {
+    const QString &caption = trUtf8(OPEN_FILE_CAPTION);
+    const QString &filter = trUtf8(OPEN_FILE_FILTER);
+    const QString &file = QFileDialog::getOpenFileName(q, caption, m_dir.absolutePath(), filter);
+
+    if (!file.isEmpty()) {
+        openFile(file);
+    }
+}
+
+void MainWindowPrivate::openFile(const QString &file)
+{
+    QFileInfo fileInfo(file);
+    m_dir = fileInfo.dir();
+
+    m_tableView->setModel(0);
     m_addRowButton->setEnabled(false);
     m_removeRowButton->setEnabled(false);
 
-    const QString &caption = trUtf8(OPEN_FILE_CAPTION);
-    const QString &filter = trUtf8(OPEN_FILE_FILTER);
-    const QString &filePath = QFileDialog::getOpenFileName(q, caption, m_dir.absolutePath(), filter);
-
-    if (filePath.isNull()) {
-        return;
-    }
-
-    QFileInfo fileInfo(filePath);
-    m_dir = fileInfo.dir();
-    m_fileLocationEditor->setText(filePath);
-
-    m_tableView->setModel(0);
-
-    if (!m_model->open(filePath)) {
-        const QString &title = trUtf8(ERROR_MESSAGE_TITLE);
-        const QString &text = trUtf8(OPEN_FILE_ERROR_TEXT).arg(filePath);
-        QMessageBox::warning(q, title, text, QMessageBox::Ok);
+    if (!m_model->open(file)) {
         m_fileLocationEditor->setText(QLatin1String(SELECT_FILE_TEXT));
-        return;
+        const QString &title = trUtf8(ERROR_MESSAGE_TITLE);
+        const QString &text = trUtf8(OPEN_FILE_ERROR_TEXT).arg(file);
+        QMessageBox::warning(q, title, text, QMessageBox::Ok);
+    } else {
+        m_tableView->setModel(m_model);
+        m_addRowButton->setEnabled(true);
+        m_fileLocationEditor->setText(file);
+        m_statusBar->showMessage(trUtf8(FILE_OPENED_MESSAGE), MESSAGE_TIMEOUT);
+        q->setLastUpdate();
+        q->connect(m_tableView->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)), SLOT(processSelectionChanged()));
     }
-
-    m_tableView->setModel(m_model);
-    q->connect(m_model, SIGNAL(dataChanged(QModelIndex,QModelIndex)), SLOT(setLastUpdate()));
-    q->connect(m_tableView->selectionModel(), SIGNAL(selectionChanged(QItemSelection,QItemSelection)), SLOT(processSelectionChanged()));
-    m_addRowButton->setEnabled(true);
-    m_statusBar->showMessage(trUtf8(FILE_OPENED_MESSAGE), MESSAGE_TIMEOUT);
-    q->setLastUpdate();
 }
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -219,6 +224,14 @@ MainWindow::~MainWindow()
 void MainWindow::openFile()
 {
     d->openFile();
+}
+
+void MainWindow::openArgFile()
+{
+    const QStringList &args = QCoreApplication::arguments();
+    if (1 < args.size()) {
+        d->openFile(args.last());
+    }
 }
 
 void MainWindow::processSelectionChanged()
