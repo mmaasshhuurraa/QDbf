@@ -10,10 +10,10 @@ Project {
         Depends { name: "QDbf" }
 
         Group {
-            name: "App install"
+            name: "Install application"
             qbs.install: true
             qbs.installDir: "bin"
-            fileTagsFilter: "application"
+            fileTagsFilter: product.type
         }
     }
 }

@@ -1,43 +1,52 @@
 import qbs.base 1.0
 
 Project {
+    property bool buildExample: false
+
     DynamicLibrary {
         name: "QDbf"
 
-        files: [ "include/*.h", "src/*.cpp" ]
+        Group {
+            name: "publicHeaders"
+            prefix: "include/"
+            files:[ "*.h" ]
+            qbs.install: true
+            qbs.installDir: "include"
+        }
 
-        cpp.includePaths: "include"
-        cpp.defines: [ "QDBF_LIBRARY" ]
-        cpp.cxxLanguageVersion: "c++11"
-        cpp.positionIndependentCode: true
+        Group {
+            name: "sources";
+            prefix: "src/"
+            files:[ "*.cpp" ]
+        }
 
         Depends { name: "cpp" }
         Depends { name: "Qt"; submodules: [ "core" ] }
+
+        cpp.defines: [ "QDBF_LIBRARY" ]
+        cpp.positionIndependentCode: true
+        cpp.cxxLanguageVersion: "c++11"
+        cpp.includePaths: "include"
+        cpp.visibility: "minimal"
 
         Export {
             Depends { name: "cpp" }
             cpp.includePaths: "include"
         }
 
-        FileTagger {
-            patterns: "*.h"
-            fileTags: ["publicHeaders"]
-        }
-
         Group {
             name: "Install library"
             qbs.install: true
             qbs.installDir: "lib"
-            fileTagsFilter: "dynamiclibrary"
-        }
-
-        Group {
-            name: "Install headers"
-            qbs.install: true
-            qbs.installDir: "include"
-            fileTagsFilter: "publicHeaders"
+            fileTagsFilter: product.type
         }
     }
 
-    references: [ "example/example.qbs" ]
+    SubProject {
+        filePath: "example/example.qbs"
+
+        Properties {
+            condition: buildExample
+        }
+    }
 }
