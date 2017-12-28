@@ -1242,6 +1242,8 @@ bool QDbfTable::addRecord(const QDbfRecord &record)
         return false;
     }
 
+    d->m_currentIndex = d->m_recordsCount;
+
     return setRecord(record);
 }
 
