@@ -22,9 +22,6 @@ public:
     explicit MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
-private:
-    Internal::MainWindowPrivate *const d;
-
 public slots:
     void openFile();
 
@@ -33,6 +30,12 @@ private slots:
     void processSelectionChanged();
     void processButtonClicked(QAbstractButton *button);
     void setLastUpdate();
+
+protected:
+    void showEvent(QShowEvent* event);
+
+private:
+    Internal::MainWindowPrivate *const d;
 
     friend class Internal::MainWindowPrivate;
 };

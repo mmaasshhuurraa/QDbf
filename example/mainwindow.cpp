@@ -40,24 +40,23 @@
 #include <QStatusBar>
 #include <QTableView>
 #include <QTimer>
+#include <QToolButton>
 #include <QVBoxLayout>
 
 static const int MESSAGE_TIMEOUT = 1000;
 
-static const char *const ADD_ROW_BUTTON_TEXT = "Add row";
 static const char *const ADD_ROW_BUTTON_TOOL_TIP = "Add row to the end of the table";
 static const char *const ADD_ROW_ERROR_TEXT = "Add row failed";
 static const char *const ERROR_MESSAGE_TITLE = "Error";
+static const char *const FILE_LOCATION_EDITOR_TEXT = "Select dbf file by clicking on the button ----->";
 static const char *const FILE_OPENED_MESSAGE = "File opened";
-static const char *const OPEN_FILE_CAPTION = "Select dbf file";
-static const char *const OPEN_FILE_FILTER = "xBase files (*.dbf)";
-static const char *const OPEN_FILE_ERROR_TEXT = "Can not open file %1";
-static const char *const REMOVE_ROW_BUTTON_TEXT = "Remove row";
+static const char *const OPEN_FILE_DIALOG_CAPTION = "Select dbf file";
+static const char *const OPEN_FILE_DIALOG_FILTER = "xBase files (*.dbf)";
+static const char *const OPEN_FILE_DIALOG_ERROR_TEXT = "Can not open file %1";
 static const char *const REMOVE_ROW_BUTTON_TOOL_TIP = "Remove selected row";
 static const char *const REMOVE_ROW_ERROR_TEXT = "Remove row failed";
 static const char *const ROW_ADDED_MESSAGE = "Row added";
 static const char *const ROW_REMOVED_MESSAGE = "Row removed";
-static const char *const SELECT_FILE_TEXT = "Select dbf file by clicking on the button ----->";
 static const char *const TABLE_LAST_UPDATE_LABEL_TOOLTIP = "Table last update";
 
 namespace Example {
@@ -66,7 +65,6 @@ namespace Internal {
 class MainWindowPrivate
 {
     Q_DECLARE_TR_FUNCTIONS(MainWindow)
-
 public:
     MainWindowPrivate();
     ~MainWindowPrivate();
@@ -82,20 +80,14 @@ public:
     QVBoxLayout *const m_baseLayout;
     QHBoxLayout *const m_fileLocationLayout;
     QLineEdit *const m_fileLocationEditor;
-    QPushButton *const m_selectFileButton;
+    QToolButton *const m_selectFileButton;
     QTableView *const m_tableView;
     QDbf::QDbfTableModel *const m_model;
     QDialogButtonBox *const m_buttonBox;
-    QPushButton *const m_addRowButton;
-    QPushButton *const m_removeRowButton;
+    QToolButton *const m_addRowButton;
+    QToolButton *const m_removeRowButton;
     QDir m_dir;
 };
-
-} // namespace Internal
-} // namespace Example
-
-using namespace Example;
-using namespace Example::Internal;
 
 MainWindowPrivate::MainWindowPrivate() :
     q(0),
@@ -105,12 +97,12 @@ MainWindowPrivate::MainWindowPrivate() :
     m_baseLayout(new QVBoxLayout(m_centralWidget)),
     m_fileLocationLayout(new QHBoxLayout()),
     m_fileLocationEditor(new QLineEdit()),
-    m_selectFileButton(new QPushButton(QString::fromLatin1("..."), 0)),
+    m_selectFileButton(new QToolButton()),
     m_tableView(new QTableView()),
     m_model(new QDbf::QDbfTableModel()),
     m_buttonBox(new QDialogButtonBox()),
-    m_addRowButton(new QPushButton(trUtf8(ADD_ROW_BUTTON_TEXT))),
-    m_removeRowButton(new QPushButton(trUtf8(REMOVE_ROW_BUTTON_TEXT))),
+    m_addRowButton(new QToolButton()),
+    m_removeRowButton(new QToolButton()),
     m_dir(QCoreApplication::applicationDirPath())
 {
 }
@@ -145,11 +137,10 @@ void MainWindowPrivate::init()
     m_baseLayout->addLayout(m_fileLocationLayout);
 
     m_fileLocationEditor->setReadOnly(true);
-    m_fileLocationEditor->setText(trUtf8(SELECT_FILE_TEXT));
+    m_fileLocationEditor->setText(trUtf8(FILE_LOCATION_EDITOR_TEXT));
     m_fileLocationLayout->addWidget(m_fileLocationEditor);
 
-    m_selectFileButton->setFixedWidth(30);
-    m_selectFileButton->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Preferred);
+    m_selectFileButton->setText(QLatin1String("..."));
     q->connect(m_selectFileButton, SIGNAL(clicked()), SLOT(openFile()));
     m_fileLocationLayout->addWidget(m_selectFileButton);
 
@@ -159,8 +150,12 @@ void MainWindowPrivate::init()
     m_tableView->setSelectionBehavior(QAbstractItemView::SelectItems);
     m_baseLayout->addWidget(m_tableView);
 
+    m_addRowButton->setText(QLatin1String("+"));
     m_buttonBox->addButton(m_addRowButton, QDialogButtonBox::ActionRole);
+
+    m_removeRowButton->setText(QLatin1String("-"));
     m_buttonBox->addButton(m_removeRowButton, QDialogButtonBox::ActionRole);
+
     q->connect(m_buttonBox, SIGNAL(clicked(QAbstractButton*)), SLOT(processButtonClicked(QAbstractButton*)));
     m_baseLayout->addWidget(m_buttonBox);
 
@@ -175,8 +170,8 @@ void MainWindowPrivate::init()
 
 void MainWindowPrivate::openFile()
 {
-    const QString &caption = trUtf8(OPEN_FILE_CAPTION);
-    const QString &filter = trUtf8(OPEN_FILE_FILTER);
+    const QString &caption = trUtf8(OPEN_FILE_DIALOG_CAPTION);
+    const QString &filter = trUtf8(OPEN_FILE_DIALOG_FILTER);
     const QString &file = QFileDialog::getOpenFileName(q, caption, m_dir.absolutePath(), filter);
 
     if (!file.isEmpty()) {
@@ -194,9 +189,9 @@ void MainWindowPrivate::openFile(const QString &file)
     m_removeRowButton->setEnabled(false);
 
     if (!m_model->open(file)) {
-        m_fileLocationEditor->setText(QLatin1String(SELECT_FILE_TEXT));
+        m_fileLocationEditor->setText(QLatin1String(FILE_LOCATION_EDITOR_TEXT));
         const QString &title = trUtf8(ERROR_MESSAGE_TITLE);
-        const QString &text = trUtf8(OPEN_FILE_ERROR_TEXT).arg(file);
+        const QString &text = trUtf8(OPEN_FILE_DIALOG_ERROR_TEXT).arg(file);
         QMessageBox::warning(q, title, text, QMessageBox::Ok);
     } else {
         m_tableView->setModel(m_model);
@@ -208,9 +203,11 @@ void MainWindowPrivate::openFile(const QString &file)
     }
 }
 
+} // namespace Internal
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
-    d(new MainWindowPrivate())
+    d(new Internal::MainWindowPrivate())
 {
     d->q = this;
     d->init();
@@ -271,3 +268,17 @@ void MainWindow::setLastUpdate()
     Q_ASSERT(d->m_model);
     d->m_tableLastUpdateLabel->setText(d->m_model->lastUpdate().toString(Qt::SystemLocaleShortDate));
 }
+
+void MainWindow::showEvent(QShowEvent* event)
+{
+    QMainWindow::showEvent(event);
+
+    static bool firstShow = true;
+    if (firstShow) {
+        d->m_selectFileButton->setFixedHeight(d->m_fileLocationEditor->height());
+        d->m_removeRowButton->setFixedWidth(d->m_addRowButton->width());
+        firstShow = false;
+    }
+}
+
+} // namespace Example
