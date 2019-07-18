@@ -510,7 +510,6 @@ bool QDbfTablePrivate::setValue(int fieldIndex, const QVariant &value)
                 auto valLength = qint32(val.length());
                 stream << valLength;
             }
-            [[clang::fallthrough]];
             case Internal::QDbfTablePrivate::DBaseMemo:
                 memoData.append(val);
                 break;
