@@ -29,7 +29,7 @@
 #include "qdbfrecord.h"
 #include "qdbftablemodel.h"
 
-constexpr int DBF_PREFETCH = 255;
+const int DBF_PREFETCH = 255;
 
 
 namespace QDbf {

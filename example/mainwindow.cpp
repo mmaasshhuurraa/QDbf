@@ -40,21 +40,21 @@
 #include "mainwindow.h"
 #include "qdbftablemodel.h"
 
-constexpr auto MESSAGE_TIMEOUT = 1000;
+const int MESSAGE_TIMEOUT = 1000;
 
-constexpr auto ADD_ROW_BUTTON_TOOL_TIP = "Add row to the end of the table";
-constexpr auto ADD_ROW_ERROR_TEXT = "Add row failed";
-constexpr auto ERROR_MESSAGE_TITLE = "Error";
-constexpr auto FILE_LOCATION_EDITOR_TEXT = "Select dbf file by clicking on the button ----->";
-constexpr auto FILE_OPENED_MESSAGE = "File opened";
-constexpr auto OPEN_FILE_DIALOG_CAPTION = "Select dbf file";
-constexpr auto OPEN_FILE_DIALOG_FILTER = "xBase files (*.dbf)";
-constexpr auto OPEN_FILE_DIALOG_ERROR_TEXT = "Can not open file %1";
-constexpr auto REMOVE_ROW_BUTTON_TOOL_TIP = "Remove selected row";
-constexpr auto REMOVE_ROW_ERROR_TEXT = "Remove row failed";
-constexpr auto ROW_ADDED_MESSAGE = "Row added";
-constexpr auto ROW_REMOVED_MESSAGE = "Row removed";
-constexpr auto TABLE_LAST_UPDATE_LABEL_TOOLTIP = "Table last update";
+const char *const ADD_ROW_BUTTON_TOOL_TIP = "Add row to the end of the table";
+const char *const ADD_ROW_ERROR_TEXT = "Add row failed";
+const char *const ERROR_MESSAGE_TITLE = "Error";
+const char *const FILE_LOCATION_EDITOR_TEXT = "Select dbf file by clicking on the button ----->";
+const char *const FILE_OPENED_MESSAGE = "File opened";
+const char *const OPEN_FILE_DIALOG_CAPTION = "Select dbf file";
+const char *const OPEN_FILE_DIALOG_FILTER = "xBase files (*.dbf)";
+const char *const OPEN_FILE_DIALOG_ERROR_TEXT = "Can not open file %1";
+const char *const REMOVE_ROW_BUTTON_TOOL_TIP = "Remove selected row";
+const char *const REMOVE_ROW_ERROR_TEXT = "Remove row failed";
+const char *const ROW_ADDED_MESSAGE = "Row added";
+const char *const ROW_REMOVED_MESSAGE = "Row removed";
+const char *const TABLE_LAST_UPDATE_LABEL_TOOLTIP = "Table last update";
 
 
 namespace Example {

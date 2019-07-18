@@ -33,76 +33,75 @@
 #include <QFileInfo>
 #include <QTextCodec>
 
+const quint16 DBC_LENGTH = 263;
+const quint8 TERMINATOR_LENGTH = 1;
 
-constexpr quint16 DBC_LENGTH = 263;
-constexpr quint8 TERMINATOR_LENGTH = 1;
+const quint8 TABLE_DESCRIPTOR_LENGTH = 32;
+const quint8 TABLE_RECORDS_COUNT_OFFSET = 4;
+const quint8 TABLE_LAST_UPDATE_OFFSET = 1;
+const quint8 TABLE_FIRST_RECORD_POSITION_OFFSET = 8;
+const quint8 RECORD_LENGTH_OFFSET = 10;
+const quint8 CODEPAGE_OFFSET = 29;
 
-constexpr quint8 TABLE_DESCRIPTOR_LENGTH = 32;
-constexpr quint8 TABLE_RECORDS_COUNT_OFFSET = 4;
-constexpr quint8 TABLE_LAST_UPDATE_OFFSET = 1;
-constexpr quint8 TABLE_FIRST_RECORD_POSITION_OFFSET = 8;
-constexpr quint8 RECORD_LENGTH_OFFSET = 10;
-constexpr quint8 CODEPAGE_OFFSET = 29;
+const quint8 FIELD_DESCRIPTOR_LENGTH = 32;
+const quint8 FIELD_NAME_LENGTH = 10;
+const quint8 FIELD_LENGTH_OFFSET = 16;
 
-constexpr quint8 FIELD_DESCRIPTOR_LENGTH = 32;
-constexpr quint8 FIELD_NAME_LENGTH = 10;
-constexpr quint8 FIELD_LENGTH_OFFSET = 16;
+const quint8 MEMO_BLOCK_LENGTH_OFFSET = 6;
+const quint16 MEMO_DBT_BLOCK_LENGTH = 512;
+const quint8 MEMO_SIGNATURE_TEXT = 1;
 
-constexpr quint8 MEMO_BLOCK_LENGTH_OFFSET = 6;
-constexpr quint16 MEMO_DBT_BLOCK_LENGTH = 512;
-constexpr quint8 MEMO_SIGNATURE_TEXT = 1;
+const quint8 FIELD_TYPE_CHARACTER = 0x43;      // C
+const quint8 FIELD_TYPE_DATE = 0x44;           // D
+const quint8 FIELD_TYPE_FLOATING_POINT = 0x46; // F
+const quint8 FIELD_TYPE_LOGICAL = 0x4C;        // L
+const quint8 FIELD_TYPE_MEMO = 0x4D;           // M
+const quint8 FIELD_TYPE_NUMBER = 0x4E;         // N
+const quint8 FIELD_TYPE_INTEGER = 0x49;        // I
+const quint8 FIELD_TYPE_DATE_TIME = 0x54;      // T
 
-constexpr quint8 FIELD_TYPE_CHARACTER = 0x43;      // C
-constexpr quint8 FIELD_TYPE_DATE = 0x44;           // D
-constexpr quint8 FIELD_TYPE_FLOATING_POINT = 0x46; // F
-constexpr quint8 FIELD_TYPE_LOGICAL = 0x4C;        // L
-constexpr quint8 FIELD_TYPE_MEMO = 0x4D;           // M
-constexpr quint8 FIELD_TYPE_NUMBER = 0x4E;         // N
-constexpr quint8 FIELD_TYPE_INTEGER = 0x49;        // I
-constexpr quint8 FIELD_TYPE_DATE_TIME = 0x54;      // T
+const quint8 CODEPAGE_NOT_SET = 0x00;
+const quint8 CODEPAGE_US_MSDOS = 0x01;
+const quint8 CODEPAGE_INTERNATIONAL_MSDOD = 0x02;
+const quint8 CODEPAGE_RUSSIAN_OEM = 0x26;
+const quint8 CODEPAGE_RUSSIAN_MSDOS = 0x65;
+const quint8 CODEPAGE_EASTERN_EUROPEAN_WINDOWS = 0xC8;
+const quint8 CODEPAGE_RUSSIAN_WINDOWS = 0xC9;
+const quint8 CODEPAGE_WINDOWS_ANSI_LATIN_1 = 0x03;
+const quint8 CODEPAGE_GB18030 = 0x7A;
 
-constexpr quint8 CODEPAGE_NOT_SET = 0x00;
-constexpr quint8 CODEPAGE_US_MSDOS = 0x01;
-constexpr quint8 CODEPAGE_INTERNATIONAL_MSDOD = 0x02;
-constexpr quint8 CODEPAGE_RUSSIAN_OEM = 0x26;
-constexpr quint8 CODEPAGE_RUSSIAN_MSDOS = 0x65;
-constexpr quint8 CODEPAGE_EASTERN_EUROPEAN_WINDOWS = 0xC8;
-constexpr quint8 CODEPAGE_RUSSIAN_WINDOWS = 0xC9;
-constexpr quint8 CODEPAGE_WINDOWS_ANSI_LATIN_1 = 0x03;
-constexpr quint8 CODEPAGE_GB18030 = 0x7A;
+const quint8 LOGICAL_UNDEFINED = 0x3F; // ?
+const quint8 LOGICAL_YES = 0x59;       // Y
+const quint8 LOGICAL_NO = 0x4E;        // N
+const quint8 LOGICAL_TRUE = 0x54;      // T
+const quint8 LOGICAL_FALSE = 0x46;     // F
+const quint8 FIELD_DELETED = 0x2A;     // *
+const quint8 FIELD_SPACER = 0x20;
+const quint8 FIELD_NAME_SPACER = 0x00;
+const quint8 END_OF_FILE_MARK = 0x1A;
+const char END_OF_DBASE_MEMO_BLOCK[] = { 0x1A, 0x1A };
 
-constexpr quint8 LOGICAL_UNDEFINED = 0x3F; // ?
-constexpr quint8 LOGICAL_YES = 0x59;       // Y
-constexpr quint8 LOGICAL_NO = 0x4E;        // N
-constexpr quint8 LOGICAL_TRUE = 0x54;      // T
-constexpr quint8 LOGICAL_FALSE = 0x46;     // F
-constexpr quint8 FIELD_DELETED = 0x2A;     // *
-constexpr quint8 FIELD_SPACER = 0x20;
-constexpr quint8 FIELD_NAME_SPACER = 0x00;
-constexpr quint8 END_OF_FILE_MARK = 0x1A;
-constexpr char END_OF_DBASE_MEMO_BLOCK[] = { 0x1A, 0x1A };
+const quint8 DATE_LENGTH = 8;
+const quint8 YEAR_OFFSET = 0;
+const quint8 YEAR_LENGTH = 4;
+const quint8 MONTH_OFFSET = 4;
+const quint8 MONTH_LENGTH = 2;
+const quint8 DAY_OFFSET = 6;
+const quint8 DAY_LENGTH = 2;
 
-constexpr quint8 DATE_LENGTH = 8;
-constexpr quint8 YEAR_OFFSET = 0;
-constexpr quint8 YEAR_LENGTH = 4;
-constexpr quint8 MONTH_OFFSET = 4;
-constexpr quint8 MONTH_LENGTH = 2;
-constexpr quint8 DAY_OFFSET = 6;
-constexpr quint8 DAY_LENGTH = 2;
+const quint8 TIME_LENGTH = 6;
+const quint8 HOUR_OFFSET = 0;
+const quint8 HOUR_LENGTH = 2;
+const quint8 MINUTE_OFFSET = 2;
+const quint8 MINUTE_LENGTH = 2;
+const quint8 SECOND_OFFSET = 4;
+const quint8 SECOND_LENGTH = 2;
 
-constexpr quint8 TIME_LENGTH = 6;
-constexpr quint8 HOUR_OFFSET = 0;
-constexpr quint8 HOUR_LENGTH = 2;
-constexpr quint8 MINUTE_OFFSET = 2;
-constexpr quint8 MINUTE_LENGTH = 2;
-constexpr quint8 SECOND_OFFSET = 4;
-constexpr quint8 SECOND_LENGTH = 2;
+const quint8 DATETIME_LENGTH = 14;
+const quint8 DATETIME_DATE_OFFSET = 0;
+const quint8 DATETIME_TIME_OFFSET = 8;
 
-constexpr quint8 DATETIME_LENGTH = 14;
-constexpr quint8 DATETIME_DATE_OFFSET = 0;
-constexpr quint8 DATETIME_TIME_OFFSET = 8;
-
-constexpr quint8 TIMESTAMP_LENGTH = 8;
+const quint8 TIMESTAMP_LENGTH = 8;
 
 
 namespace QDbf {
