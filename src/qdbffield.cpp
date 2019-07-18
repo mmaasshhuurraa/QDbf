@@ -19,10 +19,10 @@
 **
 ***************************************************************************/
 
+#include <QDebug>
 
 #include "qdbffield.h"
 
-#include <QDebug>
 
 namespace QDbf {
 namespace Internal {
@@ -30,48 +30,44 @@ namespace Internal {
 class QDbfFieldPrivate
 {
 public:
-    QDbfFieldPrivate(const QString &name);
+    explicit QDbfFieldPrivate(const QString &name);
     QDbfFieldPrivate(const QDbfFieldPrivate &other);
     bool operator==(const QDbfFieldPrivate &other) const;
 
-    QAtomicInt ref;
-    bool m_isReadOnly;
+    QAtomicInt ref = 1;
+    QDbfField::QDbfType m_type = QDbfField::Undefined;
     QString m_name;
-    QDbfField::QDbfType m_type;
-    int m_length;
-    int m_precision;
-    int m_offset;
+    int m_length = -1;
+    int m_precision = -1;
+    int m_offset = 0;
+    bool m_readOnly = false;
     QVariant m_defaultValue;
 };
 
+
 QDbfFieldPrivate::QDbfFieldPrivate(const QString &name) :
-    ref(1),
-    m_isReadOnly(false),
-    m_name(name),
-    m_type(QDbfField::Undefined),
-    m_length(-1),
-    m_precision(-1),
-    m_offset(0)
+    m_name(name)
 {
 }
 
+
 QDbfFieldPrivate::QDbfFieldPrivate(const QDbfFieldPrivate &other) :
-    ref(1),
-    m_isReadOnly(other.m_isReadOnly),
-    m_name(other.m_name),
     m_type(other.m_type),
+    m_name(other.m_name),
     m_length(other.m_length),
     m_precision(other.m_precision),
     m_offset(other.m_offset),
+    m_readOnly(other.m_readOnly),
     m_defaultValue(other.m_defaultValue)
 {
 }
+
 
 bool QDbfFieldPrivate::operator==(const QDbfFieldPrivate &other) const
 {
     return (m_name == other.m_name &&
             m_type == other.m_type &&
-            m_isReadOnly == other.m_isReadOnly &&
+            m_readOnly == other.m_readOnly &&
             m_length == other.m_length &&
             m_precision == other.m_precision &&
             m_offset == other.m_offset &&
@@ -80,10 +76,12 @@ bool QDbfFieldPrivate::operator==(const QDbfFieldPrivate &other) const
 
 } // namespace Internal
 
+
 QDbfField::QDbfField(const QString &fieldName) :
     d(new Internal::QDbfFieldPrivate(fieldName))
 {
 }
+
 
 QDbfField::QDbfField(const QDbfField &other) :
     d(other.d)
@@ -92,15 +90,14 @@ QDbfField::QDbfField(const QDbfField &other) :
     val = other.val;
 }
 
-bool QDbfField::operator==(const QDbfField &other) const
+
+QDbfField::QDbfField(QDbfField &&other) noexcept :
+    d(other.d),
+    val(std::move(other.val))
 {
-    return ((d == other.d || *d == *other.d) && val == other.val);
+    other.d = nullptr;
 }
 
-bool QDbfField::operator!=(const QDbfField& other) const
-{
-    return !operator==(other);
-}
 
 QDbfField &QDbfField::operator=(const QDbfField &other)
 {
@@ -113,13 +110,34 @@ QDbfField &QDbfField::operator=(const QDbfField &other)
     return *this;
 }
 
+
+QDbfField &QDbfField::operator=(QDbfField &&other) noexcept
+{
+    other.swap(*this);
+    return *this;
+}
+
+
+bool QDbfField::operator==(const QDbfField &other) const
+{
+    return ((d == other.d || *d == *other.d) && val == other.val);
+}
+
+
+bool QDbfField::operator!=(const QDbfField &other) const
+{
+    return !operator==(other);
+}
+
+
 QDbfField::~QDbfField()
 {
-    if (!d->ref.deref()) {
+    if (nullptr != d && !d->ref.deref()) {
         delete d;
-        d = 0;
+        d = nullptr;
     }
 }
+
 
 void QDbfField::setValue(const QVariant &value)
 {
@@ -130,32 +148,38 @@ void QDbfField::setValue(const QVariant &value)
     val = value;
 }
 
+
 void QDbfField::setName(const QString &name)
 {
     detach();
     d->m_name = name;
 }
 
+
 QString QDbfField::name() const
 {
     return d->m_name;
 }
+
 
 bool QDbfField::isNull() const
 {
     return val.isNull();
 }
 
+
 void QDbfField::setReadOnly(bool readOnly)
 {
     detach();
-    d->m_isReadOnly = readOnly;
+    d->m_readOnly = readOnly;
 }
+
 
 bool QDbfField::isReadOnly() const
 {
-    return d->m_isReadOnly;
+    return d->m_readOnly;
 }
+
 
 void QDbfField::clear()
 {
@@ -166,16 +190,19 @@ void QDbfField::clear()
     val = d->m_defaultValue;
 }
 
+
 void QDbfField::setType(QDbfType type)
 {
     detach();
     d->m_type = type;
 }
 
+
 QDbfField::QDbfType QDbfField::type() const
 {
     return d->m_type;
 }
+
 
 void QDbfField::setLength(int length)
 {
@@ -183,10 +210,12 @@ void QDbfField::setLength(int length)
     d->m_length = length;
 }
 
+
 int QDbfField::length() const
 {
     return d->m_length;
 }
+
 
 void QDbfField::setPrecision(int precision)
 {
@@ -194,10 +223,12 @@ void QDbfField::setPrecision(int precision)
     d->m_precision = precision;
 }
 
+
 int QDbfField::precision() const
 {
     return d->m_precision;
 }
+
 
 void QDbfField::setOffset(int offset)
 {
@@ -205,10 +236,12 @@ void QDbfField::setOffset(int offset)
     d->m_offset = offset;
 }
 
+
 int QDbfField::offset() const
 {
     return d->m_offset;
 }
+
 
 void QDbfField::setDefaultValue(const QVariant &value)
 {
@@ -216,17 +249,33 @@ void QDbfField::setDefaultValue(const QVariant &value)
     d->m_defaultValue = value;
 }
 
+
 QVariant QDbfField::defaultValue() const
 {
     return d->m_defaultValue;
 }
+
+
+void QDbfField::swap(QDbfField &other) noexcept
+{
+    std::swap(d, other.d);
+    std::swap(val, other.val);
+}
+
 
 void QDbfField::detach()
 {
     qAtomicDetach(d);
 }
 
+
+void swap(QDbfField &lhs, QDbfField &rhs)
+{
+    lhs.swap(rhs);
+}
+
 } // namespace QDbf
+
 
 QString typeToString(QDbf::QDbfField::QDbfType type)
 {
@@ -251,6 +300,7 @@ QString typeToString(QDbf::QDbfField::QDbfType type)
         return QLatin1String("Undefined");
     }
 }
+
 
 QDebug operator<<(QDebug debug, const QDbf::QDbfField &field)
 {

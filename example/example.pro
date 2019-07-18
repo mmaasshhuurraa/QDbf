@@ -22,6 +22,7 @@
 
 TARGET = QDbfExample
 TEMPLATE = app
+CONFIG += c++11
 
 include(../common.pri)
 include(rpath.pri)

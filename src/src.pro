@@ -24,7 +24,7 @@ TARGET = QDbf
 
 QT -= gui
 TEMPLATE = lib
-CONFIG += shared dll
+CONFIG += shared dll c++11
 
 include(../common.pri)
 
@@ -41,7 +41,6 @@ HEADERS += \
     $$SOURCE_TREE/include/qdbfrecord.h \
     $$SOURCE_TREE/include/qdbftable.h \
     $$SOURCE_TREE/include/qdbftablemodel.h \
-    $$SOURCE_TREE/include/qdbf_compat.h \
     $$SOURCE_TREE/include/qdbf_global.h
 
 SOURCES += \

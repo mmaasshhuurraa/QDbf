@@ -19,16 +19,18 @@
 **
 ***************************************************************************/
 
-
-#include "qdbftablemodel.h"
-
-#include "qdbffield.h"
-#include "qdbfrecord.h"
+#include <algorithm>
+#include <memory>
 
 #include <QDate>
 #include <QDebug>
 
-static const int DBF_PREFETCH = 255;
+#include "qdbffield.h"
+#include "qdbfrecord.h"
+#include "qdbftablemodel.h"
+
+constexpr auto DBF_PREFETCH = 255;
+
 
 namespace QDbf {
 namespace Internal {
@@ -36,43 +38,27 @@ namespace Internal {
 class QDbfTableModelPrivate
 {
 public:
-    QDbfTableModelPrivate();
-    QDbfTableModelPrivate(const QString &filePath);
-    ~QDbfTableModelPrivate();
+    explicit QDbfTableModelPrivate(const QString &filePath);
 
     void clear();
 
     QString m_filePath;
-    QDbfTable *const m_dbfTable;
+    const std::unique_ptr<QDbfTable> m_dbfTable;
     QDbfRecord m_record;
     QVector<QDbfRecord> m_records;
     QVector<QHash<int, QVariant> > m_headers;
-    int m_deletedRecordsCount;
-    int m_lastRecordIndex;
-    bool m_readOnly;
+    int m_deletedRecordsCount = 0;
+    int m_lastRecordIndex = -1;
+    bool m_readOnly = false;
 };
 
-QDbfTableModelPrivate::QDbfTableModelPrivate() :
-    m_dbfTable(new QDbfTable()),
-    m_deletedRecordsCount(0),
-    m_lastRecordIndex(-1),
-    m_readOnly(false)
-{
-}
 
 QDbfTableModelPrivate::QDbfTableModelPrivate(const QString &filePath) :
     m_filePath(filePath),
-    m_dbfTable(new QDbfTable()),
-    m_deletedRecordsCount(0),
-    m_lastRecordIndex(-1),
-    m_readOnly(false)
+    m_dbfTable(new QDbfTable())
 {
 }
 
-QDbfTableModelPrivate::~QDbfTableModelPrivate()
-{
-  delete m_dbfTable;
-}
 
 void QDbfTableModelPrivate::clear()
 {
@@ -86,11 +72,12 @@ void QDbfTableModelPrivate::clear()
 
 } // namespace Internal
 
+
 QDbfTableModel::QDbfTableModel(QObject *parent) :
-    QAbstractTableModel(parent),
-    d(new Internal::QDbfTableModelPrivate())
+    QDbfTableModel(QString(), parent)
 {
 }
+
 
 QDbfTableModel::QDbfTableModel(const QString &filePath, QObject *parent) :
     QAbstractTableModel(parent),
@@ -98,10 +85,26 @@ QDbfTableModel::QDbfTableModel(const QString &filePath, QObject *parent) :
 {
 }
 
+
+QDbfTableModel::QDbfTableModel(QDbfTableModel &&other) noexcept :
+    d(other.d)
+{
+    other.d = nullptr;
+}
+
+
+QDbfTableModel &QDbfTableModel::operator=(QDbfTableModel &&other) noexcept
+{
+    other.swap(*this);
+    return *this;
+}
+
+
 QDbfTableModel::~QDbfTableModel()
 {
     delete d;
 }
+
 
 bool QDbfTableModel::open(const QString &filePath, bool readOnly)
 {
@@ -109,11 +112,12 @@ bool QDbfTableModel::open(const QString &filePath, bool readOnly)
     return open(readOnly);
 }
 
+
 bool QDbfTableModel::open(bool readOnly)
 {
     d->clear();
     d->m_readOnly = readOnly;
-    const QDbfTable::OpenMode openMode = d->m_readOnly ? QDbfTable::ReadOnly : QDbfTable::ReadWrite;
+    auto openMode = d->m_readOnly ? QDbfTable::ReadOnly : QDbfTable::ReadWrite;
 
     if (!d->m_dbfTable->open(d->m_filePath, openMode)) {
         return false;
@@ -128,36 +132,43 @@ bool QDbfTableModel::open(bool readOnly)
     return true;
 }
 
+
 void QDbfTableModel::close()
 {
     d->clear();
     d->m_dbfTable->close();
 }
 
+
 bool QDbfTableModel::readOnly() const
 {
     return d->m_readOnly;
 }
+
 
 QDbfTable::DbfTableError QDbfTableModel::error() const
 {
     return d->m_dbfTable->error();
 }
 
+
 QDate QDbfTableModel::lastUpdate() const
 {
     return d->m_dbfTable->lastUpdate();
 }
+
 
 int QDbfTableModel::rowCount(const QModelIndex &) const
 {
     return d->m_records.count();
 }
 
+
 int QDbfTableModel::columnCount(const QModelIndex &) const
 {
     return d->m_record.count();
 }
+
 
 QVariant QDbfTableModel::data(const QModelIndex &index, int role) const
 {
@@ -170,7 +181,7 @@ QVariant QDbfTableModel::data(const QModelIndex &index, int role) const
         return QVariant();
     }
 
-    const QVariant &value = d->m_records.at(index.row()).value(index.column());
+    const auto &value = d->m_records.at(index.row()).value(index.column());
 
     switch (role) {
     case Qt::DisplayRole:
@@ -193,14 +204,15 @@ QVariant QDbfTableModel::data(const QModelIndex &index, int role) const
     }
 }
 
+
 bool QDbfTableModel::setHeaderData(int section, Qt::Orientation orientation, const QVariant &value, int role)
 {
-    if (orientation != Qt::Horizontal || section < 0 || columnCount() <= section) {
+    if (Qt::Horizontal != orientation || section < 0 || columnCount() <= section) {
         return false;
     }
 
     if (d->m_headers.size() <= section) {
-        d->m_headers.resize(qMax(section + 1, 16));
+        d->m_headers.resize(std::max(section + 1, 16));
     }
 
     d->m_headers[section][role] = value;
@@ -209,12 +221,13 @@ bool QDbfTableModel::setHeaderData(int section, Qt::Orientation orientation, con
     return true;
 }
 
+
 QVariant QDbfTableModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
     if (orientation == Qt::Horizontal) {
-        QVariant value = d->m_headers.value(section).value(role);
+        auto value = d->m_headers.value(section).value(role);
 
-        if (role == Qt::DisplayRole && !value.isValid()) {
+        if (Qt::DisplayRole == role && !value.isValid()) {
             value = d->m_headers.value(section).value(Qt::EditRole);
         }
 
@@ -222,17 +235,18 @@ QVariant QDbfTableModel::headerData(int section, Qt::Orientation orientation, in
             return value;
         }
 
-        if (role == Qt::DisplayRole && d->m_record.count() > section) {
+        if (Qt::DisplayRole == role && d->m_record.count() > section) {
             return d->m_record.fieldName(section);
         }
     }
 
-    if (role == Qt::DisplayRole) {
+    if (Qt::DisplayRole == role) {
         return section + 1;
     }
 
     return QVariant();
 }
+
 
 bool QDbfTableModel::insertRows(int row, int count, const QModelIndex &)
 {
@@ -243,8 +257,8 @@ bool QDbfTableModel::insertRows(int row, int count, const QModelIndex &)
 
     QVector<QDbfRecord> records;
     records.reserve(count);
-    bool result = true;
-    for (int i = 0; i < count; ++i) {
+    auto result = true;
+    for (auto i = 0; i < count; ++i) {
         if (!d->m_dbfTable->addRecord()) {
             result = false;
             break;
@@ -253,13 +267,13 @@ bool QDbfTableModel::insertRows(int row, int count, const QModelIndex &)
         records.append(d->m_dbfTable->record());
     }
 
-    const bool showRows = (d->m_records.size() + records.size() + d->m_deletedRecordsCount == d->m_dbfTable->size());
+    auto showRows = (d->m_records.size() + records.size() + d->m_deletedRecordsCount == d->m_dbfTable->size());
 
     if (showRows) {
-        beginInsertRows(QModelIndex(), row, row + records.size() - 1);
+        beginInsertRows({}, row, row + records.size() - 1);
         d->m_records.reserve(records.size());
 #if QT_VERSION < 0x050500
-        for (int i = 0; i < records.size(); ++i) {
+        for (auto i = 0; i < records.size(); ++i) {
             d->m_records.append(records.at(i));
         }
 #else
@@ -271,10 +285,12 @@ bool QDbfTableModel::insertRows(int row, int count, const QModelIndex &)
     return result;
 }
 
-bool QDbfTableModel::insertRow(int row, const QModelIndex& index)
+
+bool QDbfTableModel::insertRow(int row, const QModelIndex &index)
 {
     return insertRows(row, 1, index);
 }
+
 
 bool QDbfTableModel::removeRows(int row, int count, const QModelIndex &)
 {
@@ -282,12 +298,12 @@ bool QDbfTableModel::removeRows(int row, int count, const QModelIndex &)
         return false;
     }
 
-    int beginRow = qMax(0, row);
-    int endRow = qMin(row + count - 1, d->m_records.size() - 1);
+    auto beginRow = std::max(0, row);
+    auto endRow = std::min(row + count - 1, d->m_records.size() - 1);
 
-    int lastRemovedRow = -1;
-    bool result = true;
-    for (int i = beginRow; i <= endRow; ++i) {
+    auto lastRemovedRow = -1;
+    auto result = true;
+    for (auto i = beginRow; i <= endRow; ++i) {
         const int recordIndex = d->m_records.at(i).recordIndex();
         if (!d->m_dbfTable->removeRecord(recordIndex)) {
             result = false;
@@ -297,36 +313,37 @@ bool QDbfTableModel::removeRows(int row, int count, const QModelIndex &)
     }
 
     if (lastRemovedRow > -1) {
-        beginRemoveRows(QModelIndex(), beginRow, lastRemovedRow);
+        beginRemoveRows({}, beginRow, lastRemovedRow);
 
-        for (int i = beginRow; i <= lastRemovedRow; ++i) {
+        for (auto i = beginRow; i <= lastRemovedRow; ++i) {
             d->m_records.remove(i);
         }
 
         d->m_deletedRecordsCount += lastRemovedRow - beginRow + 1;
-
         endRemoveRows();
     }
 
     return result;
 }
 
-bool QDbfTableModel::removeRow(int row, const QModelIndex& index)
+
+bool QDbfTableModel::removeRow(int row, const QModelIndex &index)
 {
     return removeRows(row, 1, index);
 }
 
+
 Qt::ItemFlags QDbfTableModel::flags(const QModelIndex &index) const
 {
-    Qt::ItemFlags flags = Qt::ItemIsEnabled | Qt::ItemIsSelectable;
+    auto flags = Qt::ItemIsEnabled | Qt::ItemIsSelectable;
 
     if (!index.isValid()) {
         return flags;
     }
 
-    const QVariant &value = d->m_records.at(index.row()).value(index.column());
+    const auto &value = d->m_records.at(index.row()).value(index.column());
 
-    if (value.type() == QVariant::Bool) {
+    if (QVariant::Bool == value.type()) {
         flags |= Qt::ItemIsTristate;
     }
 
@@ -337,14 +354,15 @@ Qt::ItemFlags QDbfTableModel::flags(const QModelIndex &index) const
     return flags;
 }
 
+
 bool QDbfTableModel::setData(const QModelIndex &index, const QVariant &value, int role)
 {
     if (!d->m_dbfTable->isOpen()) {
         return false;
     }
 
-    if (index.isValid() && role == Qt::EditRole) {
-        const int recordIndex = d->m_records.at(index.row()).recordIndex();
+    if (index.isValid() && Qt::EditRole == role) {
+        auto recordIndex = d->m_records.at(index.row()).recordIndex();
         if (!d->m_dbfTable->seek(recordIndex)) {
             return false;
         }
@@ -362,14 +380,12 @@ bool QDbfTableModel::setData(const QModelIndex &index, const QVariant &value, in
     return false;
 }
 
+
 bool QDbfTableModel::canFetchMore(const QModelIndex &) const
 {
-    if (d->m_dbfTable->isOpen() && (d->m_records.size() + d->m_deletedRecordsCount < d->m_dbfTable->size())) {
-        return true;
-    }
-
-    return false;
+    return (d->m_dbfTable->isOpen() && (d->m_records.size() + d->m_deletedRecordsCount < d->m_dbfTable->size()));
 }
+
 
 void QDbfTableModel::fetchMore(const QModelIndex &)
 {
@@ -377,14 +393,14 @@ void QDbfTableModel::fetchMore(const QModelIndex &)
         return;
     }
 
-    const int fetchSize = qMin(d->m_dbfTable->size() - d->m_records.size() - d->m_deletedRecordsCount, DBF_PREFETCH);
+    auto fetchSize = std::min(d->m_dbfTable->size() - d->m_records.size() - d->m_deletedRecordsCount, DBF_PREFETCH);
 
     QVector<QDbfRecord> records;
     records.reserve(fetchSize);
-    int deletedRecordsCount = 0;
-    int fetchedRecordSize = 0;
+    auto deletedRecordsCount = 0;
+    auto fetchedRecordSize = 0;
     while (d->m_dbfTable->next()) {
-        const QDbfRecord record(d->m_dbfTable->record());
+        const auto &record = d->m_dbfTable->record();
         if (record.isDeleted()) {
             ++deletedRecordsCount;
             continue;
@@ -396,11 +412,11 @@ void QDbfTableModel::fetchMore(const QModelIndex &)
     }
     d->m_lastRecordIndex = d->m_dbfTable->at();
 
-    beginInsertRows(QModelIndex(), d->m_records.size(), d->m_records.size() + records.size() - 1);
+    beginInsertRows({}, d->m_records.size(), d->m_records.size() + records.size() - 1);
 
     d->m_records.reserve(records.count());
 #if QT_VERSION < 0x050500
-    for (int i = 0; i < records.size(); ++i) {
+    for (auto i = 0; i < records.size(); ++i) {
         d->m_records.append(records.at(i));
     }
 #else
@@ -409,6 +425,18 @@ void QDbfTableModel::fetchMore(const QModelIndex &)
     d->m_deletedRecordsCount += deletedRecordsCount;
 
     endInsertRows();
+}
+
+
+void QDbfTableModel::swap(QDbfTableModel &other) noexcept
+{
+    std::swap(d, other.d);
+}
+
+
+void swap(QDbfTableModel &lhs, QDbfTableModel &rhs)
+{
+    lhs.swap(rhs);
 }
 
 } // namespace QDbf

@@ -19,9 +19,10 @@
 **
 ***************************************************************************/
 
-
 #ifndef QDBFTABLE_H
 #define QDBFTABLE_H
+
+#include <QString>
 
 #include "qdbf_global.h"
 
@@ -29,6 +30,7 @@ QT_BEGIN_NAMESPACE
 class QDate;
 class QVariant;
 QT_END_NAMESPACE
+
 
 namespace QDbf {
 namespace Internal {
@@ -68,9 +70,12 @@ public:
         UnsupportedFile
     };
 
-    QDbfTable();
-    explicit QDbfTable(const QString &dbfFileName);
-    ~QDbfTable();
+    explicit QDbfTable(const QString &dbfFileName = QString());
+
+    QDbfTable(QDbfTable &&other) noexcept;
+    QDbfTable &operator=(QDbfTable &&other) noexcept;
+
+    virtual ~QDbfTable();
 
     bool open(const QString &fileName, OpenMode openMode = QDbfTable::ReadOnly);
     bool open(OpenMode openMode = QDbfTable::ReadOnly);
@@ -110,13 +115,18 @@ public:
     bool removeRecord(int index);
     bool removeRecord();
 
+    void swap(QDbfTable &other) noexcept;
+
 private:
     Q_DISABLE_COPY(QDbfTable)
-    Internal::QDbfTablePrivate *const d;
+
+    Internal::QDbfTablePrivate *d;
 };
+
+void swap(QDbfTable &lhs, QDbfTable &rhs);
 
 } // namespace QDbf
 
-QDebug operator<<(QDebug, const QDbf::QDbfTable&);
+QDebug operator<<(QDebug, const QDbf::QDbfTable &);
 
 #endif // QDBFTABLE_H

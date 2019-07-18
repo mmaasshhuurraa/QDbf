@@ -23,25 +23,25 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include <memory>
+
 #include <QMainWindow>
 
 QT_BEGIN_NAMESPACE
 class QAbstractButton;
 QT_END_NAMESPACE
 
+
 namespace Example {
 namespace Internal {
-
 class MainWindowPrivate;
-
 } // namespace Internal
-
 
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
 public:
-    explicit MainWindow(QWidget *parent = 0);
+    explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
 public slots:
@@ -54,10 +54,10 @@ private slots:
     void setLastUpdate();
 
 protected:
-    void showEvent(QShowEvent* event);
+    void showEvent(QShowEvent *event) final;
 
 private:
-    Internal::MainWindowPrivate *const d;
+    const std::unique_ptr<Internal::MainWindowPrivate> d;
 
     friend class Internal::MainWindowPrivate;
 };

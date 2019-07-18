@@ -19,11 +19,11 @@
 **
 ***************************************************************************/
 
-
 #ifndef QDBF_GLOBAL_H
 #define QDBF_GLOBAL_H
 
 #include <QtGlobal>
+
 
 #if defined(QDBF_LIBRARY)
 #  define QDBF_EXPORT Q_DECL_EXPORT

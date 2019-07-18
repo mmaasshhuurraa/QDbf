@@ -19,14 +19,13 @@
 **
 ***************************************************************************/
 
-
-#include "qdbffield.h"
-
-#include "qdbfrecord.h"
-
 #include <QDebug>
 #include <QVariant>
 #include <QVector>
+
+#include "qdbffield.h"
+#include "qdbfrecord.h"
+
 
 namespace QDbf {
 namespace Internal {
@@ -34,42 +33,45 @@ namespace Internal {
 class QDbfRecordPrivate
 {
 public:
-    QDbfRecordPrivate();
+    QDbfRecordPrivate() = default;
     QDbfRecordPrivate(const QDbfRecordPrivate &other);
 
-    QAtomicInt ref;
-    int m_index;
-    bool m_isDeleted;
+    QAtomicInt ref = 1;
+    int m_index = -1;
     QVector<QDbfField> m_fields;
+    bool m_deleted = false;
 };
 
-QDbfRecordPrivate::QDbfRecordPrivate() :
-    ref(1),
-    m_index(-1),
-    m_isDeleted(false)
-{
-}
 
 QDbfRecordPrivate::QDbfRecordPrivate(const QDbfRecordPrivate &other) :
-    ref(1),
     m_index(other.m_index),
-    m_isDeleted(other.m_isDeleted),
-    m_fields(other.m_fields)
+    m_fields(other.m_fields),
+    m_deleted(other.m_deleted)
 {
 }
 
 } // namespace Internal
 
+
 QDbfRecord::QDbfRecord() :
-  d(new Internal::QDbfRecordPrivate())
+    d(new Internal::QDbfRecordPrivate())
 {
 }
+
 
 QDbfRecord::QDbfRecord(const QDbfRecord &other) :
     d(other.d)
 {
     d->ref.ref();
 }
+
+
+QDbfRecord::QDbfRecord(QDbfRecord &&other) noexcept :
+    d(other.d)
+{
+    other.d = nullptr;
+}
+
 
 QDbfRecord &QDbfRecord::operator=(const QDbfRecord &other)
 {
@@ -81,6 +83,14 @@ QDbfRecord &QDbfRecord::operator=(const QDbfRecord &other)
     return *this;
 }
 
+
+QDbfRecord &QDbfRecord::operator=(QDbfRecord &&other) noexcept
+{
+    other.swap(*this);
+    return *this;
+}
+
+
 bool QDbfRecord::operator==(const QDbfRecord &other) const
 {
     return (recordIndex() == other.recordIndex() &&
@@ -88,27 +98,33 @@ bool QDbfRecord::operator==(const QDbfRecord &other) const
             d->m_fields == other.d->m_fields);
 }
 
-bool QDbfRecord::operator!=(const QDbfRecord& other) const
+
+bool QDbfRecord::operator!=(const QDbfRecord &other) const
 {
     return !operator==(other);
 }
 
+
 QDbfRecord::~QDbfRecord()
 {
-    if (!d->ref.deref()) {
+    if (nullptr != d && !d->ref.deref()) {
         delete d;
+        d = nullptr;
     }
 }
+
 
 void QDbfRecord::setRecordIndex(int index)
 {
     d->m_index = index;
 }
 
+
 int QDbfRecord::recordIndex() const
 {
     return d->m_index;
 }
+
 
 void QDbfRecord::setValue(int fieldIndex, const QVariant &value)
 {
@@ -120,20 +136,24 @@ void QDbfRecord::setValue(int fieldIndex, const QVariant &value)
     d->m_fields[fieldIndex].setValue(value);
 }
 
+
 QVariant QDbfRecord::value(int fieldIndex) const
 {
     return d->m_fields.value(fieldIndex).value();
 }
+
 
 void QDbfRecord::setValue(const QString &fieldName, const QVariant &value)
 {
     setValue(indexOf(fieldName), value);
 }
 
+
 QVariant QDbfRecord::value(const QString &fieldName) const
 {
     return value(indexOf(fieldName));
 }
+
 
 void QDbfRecord::setNull(int fieldIndex)
 {
@@ -145,26 +165,30 @@ void QDbfRecord::setNull(int fieldIndex)
     d->m_fields[fieldIndex].clear();
 }
 
+
 bool QDbfRecord::isNull(int fieldIndex) const
 {
     return d->m_fields.value(fieldIndex).isNull();
 }
+
 
 void QDbfRecord::setNull(const QString &fieldName)
 {
     setNull(indexOf(fieldName));
 }
 
+
 bool QDbfRecord::isNull(const QString &fieldName) const
 {
     return isNull(indexOf(fieldName));
 }
 
+
 int QDbfRecord::indexOf(const QString &fieldName) const
 {
-    const QString &name = fieldName.toUpper();
+    const auto &name = fieldName.toUpper();
 
-    for (int i = 0; i < count(); ++i) {
+    for (auto i = 0; i < count(); ++i) {
         if (d->m_fields.at(i).name().toUpper() == name) {
             return i;
         }
@@ -173,26 +197,31 @@ int QDbfRecord::indexOf(const QString &fieldName) const
     return -1;
 }
 
+
 QString QDbfRecord::fieldName(int fieldIndex) const
 {
     return d->m_fields.value(fieldIndex).name();
 }
+
 
 QDbfField QDbfRecord::field(int fieldIndex) const
 {
     return d->m_fields.value(fieldIndex);
 }
 
+
 QDbfField QDbfRecord::field(const QString &fieldName) const
 {
     return field(indexOf(fieldName));
 }
+
 
 void QDbfRecord::append(const QDbfField &field)
 {
     detach();
     d->m_fields.append(field);
 }
+
 
 void QDbfRecord::replace(int pos, const QDbfField &field)
 {
@@ -204,11 +233,13 @@ void QDbfRecord::replace(int pos, const QDbfField &field)
     d->m_fields[pos] = field;
 }
 
+
 void QDbfRecord::insert(int pos, const QDbfField &field)
 {
     detach();
     d->m_fields.insert(pos, field);
 }
+
 
 void QDbfRecord::remove(int pos)
 {
@@ -220,31 +251,37 @@ void QDbfRecord::remove(int pos)
     d->m_fields.remove(pos);
 }
 
+
 bool QDbfRecord::isEmpty() const
 {
     return d->m_fields.isEmpty();
 }
 
+
 void QDbfRecord::setDeleted(bool deleted)
 {
     detach();
-    d->m_isDeleted = deleted;
+    d->m_deleted = deleted;
 }
+
 
 bool QDbfRecord::isDeleted() const
 {
-    return d->m_isDeleted;
+    return d->m_deleted;
 }
+
 
 bool QDbfRecord::contains(int fieldIndex) const
 {
     return fieldIndex >= 0 && fieldIndex < d->m_fields.count();
 }
 
+
 bool QDbfRecord::contains(const QString &fieldName) const
 {
     return (indexOf(fieldName) >= 0);
 }
+
 
 void QDbfRecord::clear()
 {
@@ -252,32 +289,48 @@ void QDbfRecord::clear()
     d->m_fields.clear();
 }
 
+
 void QDbfRecord::clearValues()
 {
     detach();
     int count = d->m_fields.count();
-    for (int i = 0; i < count; ++i) {
+    for (auto i = 0; i < count; ++i) {
         d->m_fields[i].clear();
     }
 }
+
 
 int QDbfRecord::count() const
 {
     return d->m_fields.count();
 }
 
+
+void QDbfRecord::swap(QDbfRecord &other) noexcept
+{
+    std::swap(d, other.d);
+}
+
+
 void QDbfRecord::detach()
 {
     qAtomicDetach(d);
 }
 
+
+void swap(QDbfRecord &lhs, QDbfRecord &rhs)
+{
+    lhs.swap(rhs);
+}
+
 } // namespace QDbf
+
 
 QDebug operator<<(QDebug debug, const QDbf::QDbfRecord &record)
 {
     debug.nospace() << "QDbfRecord(" << record.count() << ')';
 
-    for (int i = 0; i < record.count(); ++i) {
+    for (auto i = 0; i < record.count(); ++i) {
         debug.nospace() << '\n' << QString::fromLatin1("%1:").arg(i, 2)
                         << record.field(i) << record.value(i).toString();
     }

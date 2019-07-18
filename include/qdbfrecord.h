@@ -19,7 +19,6 @@
 **
 ***************************************************************************/
 
-
 #ifndef QDBFRECORD_H
 #define QDBFRECORD_H
 
@@ -29,6 +28,7 @@ QT_BEGIN_NAMESPACE
 class QString;
 class QVariant;
 QT_END_NAMESPACE
+
 
 namespace QDbf {
 namespace Internal {
@@ -41,11 +41,17 @@ class QDBF_EXPORT QDbfRecord
 {
 public:
     QDbfRecord();
+
     QDbfRecord(const QDbfRecord &other);
+    QDbfRecord(QDbfRecord &&other) noexcept;
+
+    QDbfRecord &operator=(const QDbfRecord &other);
+    QDbfRecord &operator=(QDbfRecord &&other) noexcept;
+
     bool operator==(const QDbfRecord &other) const;
     bool operator!=(const QDbfRecord &other) const;
-    QDbfRecord &operator=(const QDbfRecord &other);
-    ~QDbfRecord();
+
+    virtual ~QDbfRecord();
 
     void setRecordIndex(int index);
     int recordIndex() const;
@@ -84,13 +90,17 @@ public:
     void clearValues();
     int count() const;
 
+    void swap(QDbfRecord &other) noexcept;
+
 private:
     Internal::QDbfRecordPrivate *d;
     void detach();
 };
 
+void swap(QDbfRecord &lhs, QDbfRecord &rhs);
+
 } // namespace QDbf
 
-QDebug operator<<(QDebug, const QDbf::QDbfRecord&);
+QDebug operator<<(QDebug, const QDbf::QDbfRecord &);
 
 #endif // QDBFRECORD_H

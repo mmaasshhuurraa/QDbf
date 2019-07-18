@@ -19,13 +19,13 @@
 **
 ***************************************************************************/
 
-
 #ifndef QDBFFIELD_H
 #define QDBFFIELD_H
 
+#include <QVariant>
+
 #include "qdbf_global.h"
 
-#include <QVariant>
 
 namespace QDbf {
 namespace Internal {
@@ -36,15 +36,20 @@ class QDbfTablePrivate;
 class QDBF_EXPORT QDbfField
 {
 public:
-    explicit QDbfField(const QString &fieldName = QLatin1String(""));
+    explicit QDbfField(const QString &fieldName = QString());
+
     QDbfField(const QDbfField &other);
+    QDbfField(QDbfField &&other) noexcept;
+
+    QDbfField &operator=(const QDbfField &other);
+    QDbfField &operator=(QDbfField &&other) noexcept;
+
     bool operator==(const QDbfField &other) const;
     bool operator!=(const QDbfField &other) const;
-    QDbfField &operator=(const QDbfField &other);
-    ~QDbfField();
 
-    enum QDbfType
-    {
+    virtual ~QDbfField();
+
+    enum QDbfType {
         Undefined = -1,
         Character,
         Date,
@@ -84,6 +89,8 @@ public:
     void setDefaultValue(const QVariant &value);
     QVariant defaultValue() const;
 
+    void swap(QDbfField &other) noexcept;
+
 private:
     Internal::QDbfFieldPrivate *d;
     QVariant val;
@@ -92,8 +99,10 @@ private:
     friend class Internal::QDbfTablePrivate;
 };
 
+void swap(QDbfField &lhs, QDbfField &rhs);
+
 } // namespace QDbf
 
-QDebug operator<<(QDebug, const QDbf::QDbfField&);
+QDebug operator<<(QDebug, const QDbf::QDbfField &);
 
 #endif // QDBFFIELD_H

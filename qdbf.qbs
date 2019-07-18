@@ -54,6 +54,7 @@ Project {
         Export {
             Depends { name: "cpp" }
             cpp.includePaths: "include"
+            cpp.cxxLanguageVersion: "c++11"
         }
 
         Group {

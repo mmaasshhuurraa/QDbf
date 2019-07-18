@@ -19,7 +19,6 @@
 **
 ***************************************************************************/
 
-
 #include "qdbffield.h"
 
 #include "qdbfrecord.h"
@@ -34,75 +33,77 @@
 #include <QFileInfo>
 #include <QTextCodec>
 
-static const quint16 DBC_LENGTH = 263;
-static const quint8 TERMINATOR_LENGTH = 1;
 
-static const quint8 TABLE_DESCRIPTOR_LENGTH = 32;
-static const quint8 TABLE_RECORDS_COUNT_OFFSET = 4;
-static const quint8 TABLE_LAST_UPDATE_OFFSET = 1;
-static const quint8 TABLE_FIRST_RECORD_POSITION_OFFSET = 8;
-static const quint8 RECORD_LENGTH_OFFSET = 10;
-static const quint8 CODEPAGE_OFFSET = 29;
+constexpr auto DBC_LENGTH = 263;
+constexpr auto TERMINATOR_LENGTH = 1;
 
-static const quint8 FIELD_DESCRIPTOR_LENGTH = 32;
-static const quint8 FIELD_NAME_LENGTH = 10;
-static const quint8 FIELD_LENGTH_OFFSET = 16;
+constexpr auto TABLE_DESCRIPTOR_LENGTH = 32;
+constexpr auto TABLE_RECORDS_COUNT_OFFSET = 4;
+constexpr auto TABLE_LAST_UPDATE_OFFSET = 1;
+constexpr auto TABLE_FIRST_RECORD_POSITION_OFFSET = 8;
+constexpr auto RECORD_LENGTH_OFFSET = 10;
+constexpr auto CODEPAGE_OFFSET = 29;
 
-static const quint8 MEMO_BLOCK_LENGTH_OFFSET = 6;
-static const quint16 MEMO_DBT_BLOCK_LENGTH = 512;
-static const quint8 MEMO_SIGNATURE_TEXT = 1;
+constexpr auto FIELD_DESCRIPTOR_LENGTH = 32;
+constexpr auto FIELD_NAME_LENGTH = 10;
+constexpr auto FIELD_LENGTH_OFFSET = 16;
 
-static const quint8 FIELD_TYPE_CHARACTER = 0x43;      // C
-static const quint8 FIELD_TYPE_DATE = 0x44;           // D
-static const quint8 FIELD_TYPE_FLOATING_POINT = 0x46; // F
-static const quint8 FIELD_TYPE_LOGICAL = 0x4C;        // L
-static const quint8 FIELD_TYPE_MEMO = 0x4D;           // M
-static const quint8 FIELD_TYPE_NUMBER = 0x4E;         // N
-static const quint8 FIELD_TYPE_INTEGER = 0x49;        // I
-static const quint8 FIELD_TYPE_DATE_TIME = 0x54;      // T
+constexpr auto MEMO_BLOCK_LENGTH_OFFSET = 6;
+constexpr auto MEMO_DBT_BLOCK_LENGTH = 512;
+constexpr auto MEMO_SIGNATURE_TEXT = 1;
 
-static const quint8 CODEPAGE_NOT_SET = 0x00;
-static const quint8 CODEPAGE_US_MSDOS = 0x01;
-static const quint8 CODEPAGE_INTERNATIONAL_MSDOD = 0x02;
-static const quint8 CODEPAGE_RUSSIAN_OEM = 0x26;
-static const quint8 CODEPAGE_RUSSIAN_MSDOS = 0x65;
-static const quint8 CODEPAGE_EASTERN_EUROPEAN_WINDOWS = 0xC8;
-static const quint8 CODEPAGE_RUSSIAN_WINDOWS = 0xC9;
-static const quint8 CODEPAGE_WINDOWS_ANSI_LATIN_1 = 0x03;
-static const quint8 CODEPAGE_GB18030 = 0x7A;
+constexpr auto FIELD_TYPE_CHARACTER = 0x43;      // C
+constexpr auto FIELD_TYPE_DATE = 0x44;           // D
+constexpr auto FIELD_TYPE_FLOATING_POINT = 0x46; // F
+constexpr auto FIELD_TYPE_LOGICAL = 0x4C;        // L
+constexpr auto FIELD_TYPE_MEMO = 0x4D;           // M
+constexpr auto FIELD_TYPE_NUMBER = 0x4E;         // N
+constexpr auto FIELD_TYPE_INTEGER = 0x49;        // I
+constexpr auto FIELD_TYPE_DATE_TIME = 0x54;      // T
 
-static const quint8 LOGICAL_UNDEFINED = 0x3F; // ?
-static const quint8 LOGICAL_YES = 0x59;       // Y
-static const quint8 LOGICAL_NO = 0x4E;        // N
-static const quint8 LOGICAL_TRUE = 0x54;      // T
-static const quint8 LOGICAL_FALSE = 0x46;     // F
-static const quint8 FIELD_DELETED = 0x2A;     // *
-static const quint8 FIELD_SPACER = 0x20;
-static const quint8 FIELD_NAME_SPACER = 0x00;
-static const quint8 END_OF_FILE_MARK = 0x1A;
-static const char END_OF_DBASE_MEMO_BLOCK[] = { 0x1A, 0x1A };
+constexpr auto CODEPAGE_NOT_SET = 0x00;
+constexpr auto CODEPAGE_US_MSDOS = 0x01;
+constexpr auto CODEPAGE_INTERNATIONAL_MSDOD = 0x02;
+constexpr auto CODEPAGE_RUSSIAN_OEM = 0x26;
+constexpr auto CODEPAGE_RUSSIAN_MSDOS = 0x65;
+constexpr auto CODEPAGE_EASTERN_EUROPEAN_WINDOWS = 0xC8;
+constexpr auto CODEPAGE_RUSSIAN_WINDOWS = 0xC9;
+constexpr auto CODEPAGE_WINDOWS_ANSI_LATIN_1 = 0x03;
+constexpr auto CODEPAGE_GB18030 = 0x7A;
 
-static const quint8 DATE_LENGTH = 8;
-static const quint8 YEAR_OFFSET = 0;
-static const quint8 YEAR_LENGTH = 4;
-static const quint8 MONTH_OFFSET = 4;
-static const quint8 MONTH_LENGTH = 2;
-static const quint8 DAY_OFFSET = 6;
-static const quint8 DAY_LENGTH = 2;
+constexpr auto LOGICAL_UNDEFINED = 0x3F; // ?
+constexpr auto LOGICAL_YES = 0x59;       // Y
+constexpr auto LOGICAL_NO = 0x4E;        // N
+constexpr auto LOGICAL_TRUE = 0x54;      // T
+constexpr auto LOGICAL_FALSE = 0x46;     // F
+constexpr auto FIELD_DELETED = 0x2A;     // *
+constexpr auto FIELD_SPACER = 0x20;
+constexpr auto FIELD_NAME_SPACER = 0x00;
+constexpr auto END_OF_FILE_MARK = 0x1A;
+constexpr char END_OF_DBASE_MEMO_BLOCK[] = { 0x1A, 0x1A };
 
-static const quint8 TIME_LENGTH = 6;
-static const quint8 HOUR_OFFSET = 0;
-static const quint8 HOUR_LENGTH = 2;
-static const quint8 MINUTE_OFFSET = 2;
-static const quint8 MINUTE_LENGTH = 2;
-static const quint8 SECOND_OFFSET = 4;
-static const quint8 SECOND_LENGTH = 2;
+constexpr auto DATE_LENGTH = 8;
+constexpr auto YEAR_OFFSET = 0;
+constexpr auto YEAR_LENGTH = 4;
+constexpr auto MONTH_OFFSET = 4;
+constexpr auto MONTH_LENGTH = 2;
+constexpr auto DAY_OFFSET = 6;
+constexpr auto DAY_LENGTH = 2;
 
-static const quint8 DATETIME_LENGTH = 14;
-static const quint8 DATETIME_DATE_OFFSET = 0;
-static const quint8 DATETIME_TIME_OFFSET = 8;
+constexpr auto TIME_LENGTH = 6;
+constexpr auto HOUR_OFFSET = 0;
+constexpr auto HOUR_LENGTH = 2;
+constexpr auto MINUTE_OFFSET = 2;
+constexpr auto MINUTE_LENGTH = 2;
+constexpr auto SECOND_OFFSET = 4;
+constexpr auto SECOND_LENGTH = 2;
 
-static const quint8 TIMESTAMP_LENGTH = 8;
+constexpr auto DATETIME_LENGTH = 14;
+constexpr auto DATETIME_DATE_OFFSET = 0;
+constexpr auto DATETIME_TIME_OFFSET = 8;
+
+constexpr auto TIMESTAMP_LENGTH = 8;
+
 
 namespace QDbf {
 namespace Internal {
@@ -110,19 +111,16 @@ namespace Internal {
 class QDbfTablePrivate
 {
 public:
-    QDbfTablePrivate();
     explicit QDbfTablePrivate(const QString &dbfFileName);
 
-    enum QDbfMemoType
-    {
+    enum QDbfMemoType {
         NoMemo,
         DBaseMemo,
         DBaseIVMemo,
         FoxProMemo
     };
 
-    enum Location
-    {
+    enum Location {
         BeforeFirstRow = -1,
         FirstRow = 0
     };
@@ -131,72 +129,44 @@ public:
     bool openMemoFile();
     QVariant memoFieldValue(int index) const;
     QDataStream::ByteOrder memoByteOrder() const;
-    bool setCodepage(QDbfTable::Codepage m_codepage);
+    bool setCodepage(QDbfTable::Codepage codepage);
     bool isValueValid(int i, const QVariant &value) const;
     void setTextCodec();
-    QDate dateFromByteArray(const QByteArray &byteArray) const;
-    QTime timeFromByteArray(const QByteArray &byteArray) const;
-    bool setValue(int fieldIndex, const QVariant& value);
+    bool setValue(int fieldIndex, const QVariant &value);
     void setLastUpdate();
 
+    static QDate dateFromByteArray(const QByteArray &byteArray);
+    static QTime timeFromByteArray(const QByteArray &byteArray);
+
     QString m_tableFileName;
+    QTextCodec *m_textCodec;
     mutable QFile m_tableFile;
     mutable QFile m_memoFile;
-    mutable QDbfTable::DbfTableError m_error;
-    QDbfTable::OpenMode m_openMode;
-    QTextCodec *m_textCodec;
-    QDbfMemoType m_memoType;
     QDate m_lastUpdate;
-    QDbfTable::Codepage m_codepage;
-    quint16 m_headerLength;
-    quint16 m_recordLength;
-    quint16 m_fieldsCount;
-    qint16 m_memoBlockLength;
-    qint32 m_memoNextFreeBlockIndex;
-    qint32 m_recordsCount;
-    mutable qint32 m_currentIndex;
+    mutable QDbfTable::DbfTableError m_error = QDbfTable::NoError;
+    QDbfTable::OpenMode m_openMode = QDbfTable::ReadOnly;
+    QDbfMemoType m_memoType = QDbfTablePrivate::NoMemo;
+    QDbfTable::Codepage m_codepage = QDbfTable::CodepageNotSet;
     mutable QDbfRecord m_currentRecord;
     QDbfRecord m_record;
-    mutable bool m_bufered;
-    bool m_dbc;
+    quint16 m_headerLength = 0;
+    quint16 m_recordLength = 0;
+    quint16 m_fieldsCount = 0;
+    qint16 m_memoBlockLength = 0;
+    qint32 m_memoNextFreeBlockIndex = 0;
+    qint32 m_recordsCount = 0;
+    mutable qint32 m_currentIndex = 0;
+    mutable bool m_bufered = false;
+    bool m_dbc = false;
 };
 
-QDbfTablePrivate::QDbfTablePrivate() :
-    m_error(QDbfTable::NoError),
-    m_openMode(QDbfTable::ReadOnly),
-    m_textCodec(QTextCodec::codecForLocale()),
-    m_memoType(QDbfTablePrivate::NoMemo),
-    m_codepage(QDbfTable::CodepageNotSet),
-    m_headerLength(0),
-    m_recordLength(0),
-    m_fieldsCount(0),
-    m_memoBlockLength(0),
-    m_memoNextFreeBlockIndex(0),
-    m_recordsCount(0),
-    m_currentIndex(0),
-    m_bufered(false),
-    m_dbc(false)
-{
-}
 
 QDbfTablePrivate::QDbfTablePrivate(const QString &dbfFileName) :
     m_tableFileName(dbfFileName),
-    m_error(QDbfTable::NoError),
-    m_openMode(QDbfTable::ReadOnly),
-    m_textCodec(QTextCodec::codecForLocale()),
-    m_memoType(QDbfTablePrivate::NoMemo),
-    m_codepage(QDbfTable::CodepageNotSet),
-    m_headerLength(0),
-    m_recordLength(0),
-    m_fieldsCount(0),
-    m_memoBlockLength(0),
-    m_memoNextFreeBlockIndex(0),
-    m_recordsCount(0),
-    m_currentIndex(0),
-    m_bufered(false),
-    m_dbc(false)
+    m_textCodec(QTextCodec::codecForLocale())
 {
 }
+
 
 void QDbfTablePrivate::clear()
 {
@@ -217,6 +187,7 @@ void QDbfTablePrivate::clear()
     m_record = QDbfRecord();
 }
 
+
 bool QDbfTablePrivate::openMemoFile()
 {
     QString memoFileExtension;
@@ -235,18 +206,18 @@ bool QDbfTablePrivate::openMemoFile()
     }
 
     QFileInfo tableFileInfo(m_tableFileName);
-    const QDir &tableDir = tableFileInfo.dir();
-    const QString &baseName = tableFileInfo.baseName();
-    const QString &filter = QString(QLatin1String("%1.%2")).arg(baseName, memoFileExtension);
-    const QStringList &entries = tableDir.entryList(QStringList(filter), QDir::Files);
+    const auto &tableDir = tableFileInfo.dir();
+    const auto &baseName = tableFileInfo.baseName();
+    const auto &filter = QString(QLatin1String("%1.%2")).arg(baseName, memoFileExtension);
+    const auto &entries = tableDir.entryList(QStringList(filter), QDir::Files);
     if (entries.isEmpty()) {
         return false;
     }
-    const QString &memoFileName = QString(QLatin1String("%1/%2")).arg(tableDir.canonicalPath(), entries.first());
+    const auto &memoFileName = QString(QLatin1String("%1/%2")).arg(tableDir.canonicalPath(), entries.first());
     m_memoFile.setFileName(memoFileName);
 
-    const QIODevice::OpenMode fileOpenMode = (m_openMode == QDbfTable::ReadWrite) ? QIODevice::ReadWrite : QIODevice::ReadOnly;
-    if (!m_memoFile.exists(memoFileName) || !m_memoFile.open(fileOpenMode)) {
+    auto fileOpenMode = (m_openMode == QDbfTable::ReadWrite) ? QIODevice::ReadWrite : QIODevice::ReadOnly;
+    if (!QFile::exists(memoFileName) || !m_memoFile.open(fileOpenMode)) {
         m_error = QDbfTable::FileOpenError;
         return false;
     }
@@ -256,7 +227,7 @@ bool QDbfTablePrivate::openMemoFile()
 
     stream >> m_memoNextFreeBlockIndex;
 
-    if (m_memoType == QDbfTablePrivate::FoxProMemo) {
+    if (QDbfTablePrivate::FoxProMemo == m_memoType) {
         stream.device()->seek(MEMO_BLOCK_LENGTH_OFFSET);
         stream >> m_memoBlockLength;
         if (m_memoBlockLength < 1) {
@@ -270,25 +241,26 @@ bool QDbfTablePrivate::openMemoFile()
     return true;
 }
 
+
 QVariant QDbfTablePrivate::memoFieldValue(int index) const
 {
     Q_ASSERT(m_memoFile.isOpen() && m_memoFile.isReadable());
 
-    qint64 position = static_cast<qint64>(m_memoBlockLength) * index;
+    auto position = qint64(m_memoBlockLength) * index;
 
-    if (m_memoType == QDbfTablePrivate::DBaseMemo) {
+    if (QDbfTablePrivate::DBaseMemo == m_memoType) {
         QByteArray data;
         forever {
             if (!m_memoFile.seek(position)) {
                 m_error = QDbfTable::FileReadError;
                 return QVariant::Invalid;
             }
-            const QByteArray &block = m_memoFile.read(m_memoBlockLength);
+            const auto &block = m_memoFile.read(m_memoBlockLength);
             if (block.isEmpty()) {
                 m_error = QDbfTable::FileReadError;
                 return QVariant::Invalid;
             }
-            const int endOfBlockPosition = block.indexOf(END_OF_DBASE_MEMO_BLOCK);
+            auto endOfBlockPosition = block.indexOf(END_OF_DBASE_MEMO_BLOCK);
             if (endOfBlockPosition == -1) {
                 data.append(block);
                 position += m_memoBlockLength;
@@ -313,12 +285,12 @@ QVariant QDbfTablePrivate::memoFieldValue(int index) const
     qint32 dataLength;
     stream >> dataLength;
 
-    const QByteArray &data = m_memoFile.read(dataLength);
-    if (dataLength > 0 && data.isEmpty()) {
+    const auto &data = m_memoFile.read(dataLength);
+    if (0 < dataLength && data.isEmpty()) {
         return QVariant::Invalid;
     }
 
-    if (signature == MEMO_SIGNATURE_TEXT) {
+    if (MEMO_SIGNATURE_TEXT == signature) {
         return m_textCodec->toUnicode(data);
     }
 
@@ -326,10 +298,12 @@ QVariant QDbfTablePrivate::memoFieldValue(int index) const
     return data;
 }
 
+
 QDataStream::ByteOrder QDbfTablePrivate::memoByteOrder() const
 {
     return (m_memoType == QDbfTablePrivate::DBaseIVMemo) ? QDataStream::LittleEndian : QDataStream::BigEndian;
 }
+
 
 bool QDbfTablePrivate::setCodepage(QDbfTable::Codepage codepage)
 {
@@ -369,7 +343,7 @@ bool QDbfTablePrivate::setCodepage(QDbfTable::Codepage codepage)
         return false;
     }
 
-    if (m_tableFile.write(reinterpret_cast<char *>(&byte), 1) != 1) {
+    if (1 != m_tableFile.write(reinterpret_cast<char *>(&byte), 1)) {
         m_error = QDbfTable::FileWriteError;
         return false;
     }
@@ -381,7 +355,8 @@ bool QDbfTablePrivate::setCodepage(QDbfTable::Codepage codepage)
     return true;
 }
 
-bool QDbfTablePrivate::isValueValid(int i, const QVariant& value) const
+
+bool QDbfTablePrivate::isValueValid(int i, const QVariant &value) const
 {
     switch (m_currentRecord.field(i).type()) {
     case QDbfField::Character:
@@ -403,6 +378,7 @@ bool QDbfTablePrivate::isValueValid(int i, const QVariant& value) const
         return false;
     }
 }
+
 
 void QDbfTablePrivate::setTextCodec()
 {
@@ -431,55 +407,58 @@ void QDbfTablePrivate::setTextCodec()
     }
 }
 
-QDate QDbfTablePrivate::dateFromByteArray(const QByteArray& byteArray) const
+
+QDate QDbfTablePrivate::dateFromByteArray(const QByteArray &byteArray)
 {
-    Q_ASSERT(byteArray.length() == DATE_LENGTH);
+    Q_ASSERT(DATE_LENGTH == byteArray.length());
 
-    bool ok = false;
+    auto ok = false;
 
-    const int y = byteArray.mid(YEAR_OFFSET, YEAR_LENGTH).toInt(&ok);
+    auto y = byteArray.mid(YEAR_OFFSET, YEAR_LENGTH).toInt(&ok);
     if (!ok) {
-        return QDate();
+        return {};
     }
 
-    const int m = byteArray.mid(MONTH_OFFSET, MONTH_LENGTH).toInt(&ok);
+    auto m = byteArray.mid(MONTH_OFFSET, MONTH_LENGTH).toInt(&ok);
     if (!ok) {
-        return QDate();
+        return {};
     }
 
-    const int d = byteArray.mid(DAY_OFFSET, DAY_LENGTH).toInt(&ok);
+    auto d = byteArray.mid(DAY_OFFSET, DAY_LENGTH).toInt(&ok);
     if (!ok) {
-        return QDate();
+        return {};
     }
 
-    return QDate(y, m, d);
+    return { y, m, d };
 }
 
-QTime QDbfTablePrivate::timeFromByteArray(const QByteArray& byteArray) const
+
+QTime QDbfTablePrivate::timeFromByteArray(const QByteArray &byteArray)
 {
-    Q_ASSERT(byteArray.length() == TIME_LENGTH);
+    Q_ASSERT(TIME_LENGTH == byteArray.length());
 
-    bool ok = false;
+    auto ok = false;
 
-    const int h = byteArray.mid(HOUR_OFFSET, HOUR_LENGTH).toInt(&ok);
+    auto h = byteArray.mid(HOUR_OFFSET, HOUR_LENGTH).toInt(&ok);
     if (!ok) {
-        return QTime();
+        return {};
     }
 
-    const int m = byteArray.mid(MINUTE_OFFSET, MINUTE_LENGTH).toInt(&ok);
+    auto m = byteArray.mid(MINUTE_OFFSET, MINUTE_LENGTH).toInt(&ok);
     if (!ok) {
-        return QTime();
+        return {};
     }
 
-    const int s = byteArray.mid(SECOND_OFFSET, SECOND_LENGTH).toInt(&ok);
+    auto s = byteArray.mid(SECOND_OFFSET, SECOND_LENGTH).toInt(&ok);
     if (!ok) {
-        return QTime();
+        return {};
     }
 
-    return QTime(h, m, s);
+    return { h, m, s };
 }
 
-bool QDbfTablePrivate::setValue(int fieldIndex, const QVariant& value)
+
+bool QDbfTablePrivate::setValue(int fieldIndex, const QVariant &value)
 {
     if (!m_tableFile.isOpen() || !m_tableFile.isWritable()) {
         m_error = QDbfTable::FileWriteError;
@@ -518,7 +497,7 @@ bool QDbfTablePrivate::setValue(int fieldIndex, const QVariant& value)
         data = QByteArray(1, value.toBool() ? LOGICAL_TRUE : LOGICAL_FALSE);
         break;
     case QDbfField::Memo: {
-        const QByteArray val = m_textCodec->fromUnicode(value.toString());
+        const auto &val = m_textCodec->fromUnicode(value.toString());
         if (val.isEmpty()) {
             data = QString().rightJustified(m_record.field(fieldIndex).length(), QLatin1Char(FIELD_SPACER), true).toLatin1();
         } else {
@@ -527,11 +506,12 @@ bool QDbfTablePrivate::setValue(int fieldIndex, const QVariant& value)
             case Internal::QDbfTablePrivate::FoxProMemo: {
                 QDataStream stream(&memoData, QIODevice::WriteOnly);
                 stream.setByteOrder(memoByteOrder());
-                qint32 signature = MEMO_SIGNATURE_TEXT;
+                auto signature = quint32(MEMO_SIGNATURE_TEXT);
                 stream << signature;
-                qint32 valLength = static_cast<qint32>(val.length());
+                auto valLength = qint32(val.length());
                 stream << valLength;
             }
+            [[clang::fallthrough]];
             case Internal::QDbfTablePrivate::DBaseMemo:
                 memoData.append(val);
                 break;
@@ -540,10 +520,10 @@ bool QDbfTablePrivate::setValue(int fieldIndex, const QVariant& value)
                 return false;
             }
 
-            if (m_record.field(fieldIndex).length() == 10) {
+            if (10 == m_record.field(fieldIndex).length()) {
                 data = QString::number(m_memoNextFreeBlockIndex)
                        .rightJustified(m_record.field(fieldIndex).length(), QLatin1Char(FIELD_SPACER), true).toLatin1();
-            } else if (m_record.field(fieldIndex).length() == 4) {
+            } else if (4 == m_record.field(fieldIndex).length()) {
                 QDataStream stream(&data, QIODevice::WriteOnly);
                 stream.setByteOrder(QDataStream::LittleEndian);
                 stream << m_memoNextFreeBlockIndex;
@@ -552,36 +532,38 @@ bool QDbfTablePrivate::setValue(int fieldIndex, const QVariant& value)
                 return false;
             }
 
-            memoBlockCount = memoData.length() / m_memoBlockLength + ((memoData.length() % m_memoBlockLength) > 0 ? 1 : 0);
+            memoBlockCount = memoData.length() / m_memoBlockLength + (0 < (memoData.length() % m_memoBlockLength) ? 1 : 0);
         }
         break;
     }
     case QDbfField::Integer: {
         QDataStream stream(&data, QIODevice::WriteOnly);
         stream.setByteOrder(QDataStream::LittleEndian);
-        const qint32 val = static_cast<qint32>(value.toInt());
+        auto val = qint32(value.toInt());
         stream << val;
         break;
     }
     case QDbfField::DateTime: {
-        const QDateTime &val = value.toDateTime();
+        const auto &val = value.toDateTime();
         if (!val.isValid()) {
             m_error = QDbfTable::InvalidValue;
             return false;
-        } else if (m_record.field(fieldIndex).length() == DATETIME_LENGTH) {
+        }
+
+        if (DATETIME_LENGTH == m_record.field(fieldIndex).length()) {
             data = val.toString(QLatin1String("yyyyMMddHHmmss"))
                    .leftJustified(m_record.field(fieldIndex).length(), QLatin1Char(FIELD_SPACER), true).toLatin1();
         } else if (m_record.field(fieldIndex).length() == TIMESTAMP_LENGTH) {
-            const qint64 julianDay = val.date().toJulianDay();
+            const auto julianDay = val.date().toJulianDay();
             if (std::numeric_limits<qint32>::max() < julianDay) {
                 m_error = QDbfTable::InvalidValue;
                 return false;
             }
-            const qint32 day = static_cast<qint32>(julianDay);
+            const auto day = qint32(julianDay);
 #if QT_VERSION < 0x050200
-            const qint32 msecs = QTime(0, 0, 0, 0).msecsTo(val.time());
+            auto msecs = QTime(0, 0, 0, 0).msecsTo(val.time());
 #else
-            const qint32 msecs = static_cast<qint32>(val.time().msecsSinceStartOfDay());
+            auto msecs = val.time().msecsSinceStartOfDay();
 #endif
             QDataStream stream(&data, QIODevice::WriteOnly);
             stream.setByteOrder(QDataStream::LittleEndian);
@@ -598,15 +580,15 @@ bool QDbfTablePrivate::setValue(int fieldIndex, const QVariant& value)
         break;
     }
 
-    if (memoBlockCount > 0) {
-        Q_ASSERT(memoData.length() > 0 && memoData.length() <= memoBlockCount * m_memoBlockLength);
+    if (0 < memoBlockCount) {
+        Q_ASSERT(0 < memoData.length() && memoData.length() <= memoBlockCount * m_memoBlockLength);
 
         if (!m_memoFile.isOpen() || !m_memoFile.isWritable()) {
             m_error = QDbfTable::FileWriteError;
             return false;
         }
 
-        const qint64 position = static_cast<qint64>(m_memoBlockLength) * m_memoNextFreeBlockIndex;
+        auto position = qint64(m_memoBlockLength) * m_memoNextFreeBlockIndex;
         if (!m_memoFile.seek(position)) {
             m_error = QDbfTable::FileReadError;
             return false;
@@ -627,8 +609,8 @@ bool QDbfTablePrivate::setValue(int fieldIndex, const QVariant& value)
         stream << m_memoNextFreeBlockIndex;
     }
 
-    const qint64 position = static_cast<qint64>(m_recordLength) * m_currentIndex +
-                            m_headerLength + m_record.field(fieldIndex).offset();
+    auto position = qint64(m_recordLength) * m_currentIndex +
+                    m_headerLength + m_record.field(fieldIndex).offset();
 
     if (!m_tableFile.seek(position)) {
         m_error = QDbfTable::FileReadError;
@@ -645,9 +627,10 @@ bool QDbfTablePrivate::setValue(int fieldIndex, const QVariant& value)
     return true;
 }
 
+
 void QDbfTablePrivate::setLastUpdate()
 {
-    const QDate &date = QDate::currentDate();
+    const auto &date = QDate::currentDate();
     if (date == m_lastUpdate) {
         return;
     }
@@ -662,13 +645,13 @@ void QDbfTablePrivate::setLastUpdate()
         return;
     }
 
-    quint8 year = quint8(date.year() - (date.year() >= 2000 ? 2000 : 1900));
+    auto year = quint8(date.year() - (date.year() >= 2000 ? 2000 : 1900));
     stream << year;
 
-    quint8 month = quint8(date.month());
+    auto month = quint8(date.month());
     stream << month;
 
-    quint8 day = quint8(date.day());
+    auto day = quint8(date.day());
     stream << day;
 
     m_lastUpdate = date;
@@ -676,35 +659,51 @@ void QDbfTablePrivate::setLastUpdate()
 
 } // namespace Internal
 
-QDbfTable::QDbfTable() :
-    d(new Internal::QDbfTablePrivate())
-{
-}
 
 QDbfTable::QDbfTable(const QString &dbfFileName) :
     d(new Internal::QDbfTablePrivate(dbfFileName))
 {
 }
 
+
+QDbfTable::QDbfTable(QDbfTable &&other) noexcept :
+    d(other.d)
+{
+    other.d = nullptr;
+}
+
+
+QDbfTable &QDbfTable::operator=(QDbfTable &&other) noexcept
+{
+    other.swap(*this);
+    return *this;
+}
+
+
 QDbfTable::~QDbfTable()
 {
     delete d;
+    d = nullptr;
 }
+
 
 QString QDbfTable::fileName() const
 {
     return d->m_tableFile.fileName();
 }
 
+
 QDbfTable::OpenMode QDbfTable::openMode() const
 {
     return d->m_openMode;
 }
 
+
 QDbfTable::DbfTableError QDbfTable::error() const
 {
     return d->m_error;
 }
+
 
 bool QDbfTable::open(const QString &fileName, OpenMode openMode)
 {
@@ -712,12 +711,14 @@ bool QDbfTable::open(const QString &fileName, OpenMode openMode)
     return open(openMode);
 }
 
+
 void QDbfTable::close()
 {
     d->clear();
     d->m_tableFile.close();
     d->m_memoFile.close();
 }
+
 
 bool QDbfTable::open(OpenMode openMode)
 {
@@ -727,7 +728,7 @@ bool QDbfTable::open(OpenMode openMode)
     QFileInfo fileInfo(d->m_tableFileName);
     d->m_tableFile.setFileName(fileInfo.canonicalFilePath());
 
-    const QIODevice::OpenMode fileOpenMode = (d->m_openMode == QDbfTable::ReadWrite) ? QIODevice::ReadWrite : QIODevice::ReadOnly;
+    auto fileOpenMode = (d->m_openMode == QDbfTable::ReadWrite) ? QIODevice::ReadWrite : QIODevice::ReadOnly;
     if (!d->m_tableFile.exists() || !d->m_tableFile.open(fileOpenMode)) {
         d->m_error = QDbfTable::FileOpenError;
         return false;
@@ -736,7 +737,7 @@ bool QDbfTable::open(OpenMode openMode)
     QDataStream stream(&d->m_tableFile);
     stream.setByteOrder(QDataStream::LittleEndian);
 
-    Internal::QDbfTablePrivate::QDbfMemoType memoType = Internal::QDbfTablePrivate::NoMemo;
+    auto memoType = Internal::QDbfTablePrivate::NoMemo;
 
     // Table version
     quint8 version;
@@ -769,11 +770,12 @@ bool QDbfTable::open(OpenMode openMode)
     // Last update
     quint8 y;
     stream >> y;
-    quint16 year = (y < 80 ? 2000 : 1900) + y;
     quint8 month;
     stream >> month;
     quint8 day;
     stream >> day;
+
+    auto year = (y < 80 ? 2000 : 1900) + y;
     d->m_lastUpdate = QDate::fromString(QString(QLatin1String("%1%2%3")).arg(year).arg(month).arg(day), QLatin1String("yyyyMd"));
 
     // Number of records
@@ -781,13 +783,10 @@ bool QDbfTable::open(OpenMode openMode)
         d->m_error = QDbfTable::FileReadError;
         return false;
     }
-    quint32 recordsCount = 0;
+
+    quint32 recordsCount;
     stream >> recordsCount;
-    if (std::numeric_limits<qint32>::max() < recordsCount) {
-        d->m_error = QDbfTable::FileReadError;
-        return false;
-    }
-    d->m_recordsCount = static_cast<qint32>(recordsCount);
+    d->m_recordsCount = qint32(recordsCount);
 
     // Length of header structure
     if (!d->m_tableFile.seek(TABLE_FIRST_RECORD_POSITION_OFFSET)) {
@@ -843,16 +842,16 @@ bool QDbfTable::open(OpenMode openMode)
     d->setTextCodec();
 
 
-    quint16 fieldDescriptorsLength = d->m_headerLength - TABLE_DESCRIPTOR_LENGTH - TERMINATOR_LENGTH;
+    auto fieldDescriptorsLength = quint16(d->m_headerLength - TABLE_DESCRIPTOR_LENGTH - TERMINATOR_LENGTH);
     if (d->m_dbc) {
         fieldDescriptorsLength -= DBC_LENGTH;
     }
 
     d->m_fieldsCount = fieldDescriptorsLength / FIELD_DESCRIPTOR_LENGTH;
 
-    qint32 fieldOffset = 1;
-    for (quint16 i = 0; i < d->m_fieldsCount; ++i) {
-        const qint32 fieldDescriptorOffset = static_cast<qint32>(FIELD_DESCRIPTOR_LENGTH) * i + TABLE_DESCRIPTOR_LENGTH;
+    auto fieldOffset = 1;
+    for (auto i = 0; i < d->m_fieldsCount; ++i) {
+        auto fieldDescriptorOffset = qint32(FIELD_DESCRIPTOR_LENGTH) * i + TABLE_DESCRIPTOR_LENGTH;
 
         // Field name
         if (!d->m_tableFile.seek(fieldDescriptorOffset)) {
@@ -860,10 +859,10 @@ bool QDbfTable::open(OpenMode openMode)
             return false;
         }
         QByteArray fieldName;
-        for (quint8 j = 0; j <= FIELD_NAME_LENGTH; ++j) {
+        for (auto j = 0; j <= FIELD_NAME_LENGTH; ++j) {
             qint8 fieldNameChar;
             stream >> fieldNameChar;
-            if (fieldNameChar != FIELD_NAME_SPACER) {
+            if (FIELD_NAME_SPACER != fieldNameChar) {
                 fieldName.append(fieldNameChar);
             }
         }
@@ -876,7 +875,7 @@ bool QDbfTable::open(OpenMode openMode)
         switch (fieldTypeChar) {
         case FIELD_TYPE_CHARACTER:
             fieldType = QDbfField::Character;
-            defaultValue = QLatin1String("");
+            defaultValue = QString();
             break;
         case FIELD_TYPE_DATE:
             fieldType = QDbfField::Date;
@@ -892,7 +891,7 @@ bool QDbfTable::open(OpenMode openMode)
             break;
         case FIELD_TYPE_MEMO:
             fieldType = QDbfField::Memo;
-            defaultValue = QLatin1String("");
+            defaultValue = QString();
             d->m_memoType = memoType;
             break;
         case FIELD_TYPE_NUMBER:
@@ -938,37 +937,43 @@ bool QDbfTable::open(OpenMode openMode)
         fieldOffset += fieldLength;
     }
 
-    if (d->m_memoType != Internal::QDbfTablePrivate::NoMemo) {
+    if (Internal::QDbfTablePrivate::NoMemo != d->m_memoType) {
         return d->openMemoFile();
     }
 
     return true;
 }
 
+
 bool QDbfTable::setCodepage(QDbfTable::Codepage codepage)
 {
     return d->setCodepage(codepage);
 }
+
 
 QDbfTable::Codepage QDbfTable::codepage() const
 {
     return d->m_codepage;
 }
 
+
 bool QDbfTable::isOpen() const
 {
     return d->m_tableFile.isOpen();
 }
+
 
 int QDbfTable::size() const
 {
     return d->m_recordsCount;
 }
 
+
 int QDbfTable::at() const
 {
     return d->m_currentIndex;
 }
+
 
 bool QDbfTable::previous() const
 {
@@ -983,6 +988,7 @@ bool QDbfTable::previous() const
     return seek(at() - 1);
 }
 
+
 bool QDbfTable::next() const
 {
     if (at() < Internal::QDbfTablePrivate::FirstRow) {
@@ -996,19 +1002,22 @@ bool QDbfTable::next() const
     return seek(at() + 1);
 }
 
+
 bool QDbfTable::first() const
 {
     return seek(Internal::QDbfTablePrivate::FirstRow);
 }
+
 
 bool QDbfTable::last() const
 {
     return seek(d->m_recordsCount - 1);
 }
 
+
 bool QDbfTable::seek(int index) const
 {
-    const qint32 previousIndex = d->m_currentIndex;
+    auto previousIndex = d->m_currentIndex;
 
     if (index < Internal::QDbfTablePrivate::FirstRow) {
         d->m_currentIndex = Internal::QDbfTablePrivate::BeforeFirstRow;
@@ -1025,19 +1034,21 @@ bool QDbfTable::seek(int index) const
     return true;
 }
 
+
 QDate QDbfTable::lastUpdate() const
 {
-  return d->m_lastUpdate;
+    return d->m_lastUpdate;
 }
 
-bool QDbfTable::setRecord(const QDbfRecord& record)
+
+bool QDbfTable::setRecord(const QDbfRecord &record)
 {
     if (record.isDeleted() && !removeRecord(d->m_currentIndex)) {
         return false;
     }
 
-    for (int i = 0; i < record.count(); ++i) {
-        const QDbfField &field = record.field(i);
+    for (auto i = 0; i < record.count(); ++i) {
+        const auto &field = record.field(i);
         if (!d->setValue(i, field.value())) {
             return false;
         }
@@ -1047,6 +1058,7 @@ bool QDbfTable::setRecord(const QDbfRecord& record)
 
     return true;
 }
+
 
 QDbfRecord QDbfTable::record() const
 {
@@ -1065,7 +1077,7 @@ QDbfRecord QDbfTable::record() const
         return d->m_currentRecord;
     }
 
-    const qint64 position = static_cast<qint64>(d->m_recordLength) * d->m_currentIndex + d->m_headerLength;
+    auto position = qint64(d->m_recordLength) * d->m_currentIndex + d->m_headerLength;
 
     if (!d->m_tableFile.seek(position)) {
         d->m_error = QDbfTable::FileReadError;
@@ -1074,16 +1086,16 @@ QDbfRecord QDbfTable::record() const
 
     d->m_currentRecord.setRecordIndex(d->m_currentIndex);
 
-    const QByteArray &recordData = d->m_tableFile.read(d->m_recordLength);
+    const auto &recordData = d->m_tableFile.read(d->m_recordLength);
     if (recordData.length() != d->m_recordLength) {
         d->m_error = QDbfTable::FileReadError;
         return d->m_record;
     }
 
-    d->m_currentRecord.setDeleted(recordData.at(0) == FIELD_DELETED ? true : false);
+    d->m_currentRecord.setDeleted(FIELD_DELETED == recordData.at(0));
 
-    for (int i = 0; i < d->m_currentRecord.count(); ++i) {
-        const QByteArray &byteArray = recordData.mid(d->m_currentRecord.field(i).offset(), d->m_currentRecord.field(i).length());
+    for (auto i = 0; i < d->m_currentRecord.count(); ++i) {
+        const auto &byteArray = recordData.mid(d->m_currentRecord.field(i).offset(), d->m_currentRecord.field(i).length());
         QVariant value;
         switch (d->m_currentRecord.field(i).type()) {
         case QDbfField::Character:
@@ -1094,14 +1106,14 @@ QDbfRecord QDbfTable::record() const
             break;
         case QDbfField::FloatingPoint:
         case QDbfField::Number:
-            if (d->m_record.field(i).precision() == 0) {
+            if (0 == d->m_record.field(i).precision()) {
                 value = byteArray.trimmed().toInt();
             } else {
                 value = byteArray.trimmed().toDouble();
             }
             break;
         case QDbfField::Logical: {
-            QString val = QString::fromLatin1(byteArray.toUpper());
+            const auto &val = QString::fromLatin1(byteArray.toUpper());
             if (val == QString(QLatin1Char(LOGICAL_UNDEFINED))) {
                 value = QVariant::Bool;
             } else if (val == QString(QLatin1Char(LOGICAL_TRUE)) || val == QString(QLatin1Char(LOGICAL_YES))) {
@@ -1116,15 +1128,15 @@ QDbfRecord QDbfTable::record() const
         case QDbfField::Memo:
             if (d->m_memoType == Internal::QDbfTablePrivate::NoMemo) {
                 value = QVariant::Invalid;
-            } else if (byteArray.length() == 10) {
+            } else if (10 == byteArray.length()) {
                 if (!byteArray.trimmed().isEmpty()) {
-                    bool ok = false;
-                    int index = QString::fromLatin1(byteArray).toInt(&ok);
+                    auto ok = false;
+                    auto index = QString::fromLatin1(byteArray).toInt(&ok);
                     value = ok ? d->memoFieldValue(index) : QVariant::Invalid;
                 } else {
                     value = QVariant::String;
                 }
-            } else if (byteArray.length() == 4) {
+            } else if (4 == byteArray.length()) {
                 QDataStream stream(byteArray);
                 stream.setByteOrder(QDataStream::LittleEndian);
                 qint32 index;
@@ -1143,22 +1155,22 @@ QDbfRecord QDbfTable::record() const
             break;
         }
         case QDbfField::DateTime: {
-            if (byteArray.length() == DATETIME_LENGTH) {
-                const QDate &date = d->dateFromByteArray(byteArray.mid(DATETIME_DATE_OFFSET, DATE_LENGTH));
-                const QTime &time = d->timeFromByteArray(byteArray.mid(DATETIME_TIME_OFFSET, TIME_LENGTH));
+            if (DATETIME_LENGTH == byteArray.length()) {
+                const auto &date = d->dateFromByteArray(byteArray.mid(DATETIME_DATE_OFFSET, DATE_LENGTH));
+                const auto &time = d->timeFromByteArray(byteArray.mid(DATETIME_TIME_OFFSET, TIME_LENGTH));
                 value = QVariant(QDateTime(date, time));
-            } else if (byteArray.length() == TIMESTAMP_LENGTH) {
+            } else if (TIMESTAMP_LENGTH == byteArray.length()) {
                 QDataStream stream(byteArray);
                 stream.setByteOrder(QDataStream::LittleEndian);
                 qint32 day;
                 stream >> day;
                 qint32 msecs;
                 stream >> msecs;
-                const QDate &date = QDate::fromJulianDay(day);
+                const auto &date = QDate::fromJulianDay(day);
 #if QT_VERSION < 0x050200
-                const QTime &time = QTime(0, 0, 0, 0).addMSecs(msecs);
+                const auto &time = QTime(0, 0, 0, 0).addMSecs(msecs);
 #else
-                const QTime &time = QTime::fromMSecsSinceStartOfDay(msecs);
+                const auto &time = QTime::fromMSecsSinceStartOfDay(msecs);
 #endif
                 value = QVariant(QDateTime(date, time));
             } else {
@@ -1179,7 +1191,8 @@ QDbfRecord QDbfTable::record() const
     return d->m_currentRecord;
 }
 
-bool QDbfTable::setValue(int fieldIndex, const QVariant& value)
+
+bool QDbfTable::setValue(int fieldIndex, const QVariant &value)
 {
     if (d->setValue(fieldIndex, value)) {
         d->setLastUpdate();
@@ -1189,20 +1202,24 @@ bool QDbfTable::setValue(int fieldIndex, const QVariant& value)
     return false;
 }
 
+
 QVariant QDbfTable::value(int fieldIndex) const
 {
     return record().value(fieldIndex);
 }
 
-bool QDbfTable::setValue(const QString& name, const QVariant& value)
+
+bool QDbfTable::setValue(const QString &name, const QVariant &value)
 {
     return setValue(d->m_record.indexOf(name), value);
 }
 
-QVariant QDbfTable::value(const QString& name) const
+
+QVariant QDbfTable::value(const QString &name) const
 {
     return record().value(name);
 }
+
 
 bool QDbfTable::addRecord()
 {
@@ -1211,6 +1228,7 @@ bool QDbfTable::addRecord()
     newRecord.setDeleted(false);
     return addRecord(newRecord);
 }
+
 
 bool QDbfTable::addRecord(const QDbfRecord &record)
 {
@@ -1229,7 +1247,7 @@ bool QDbfTable::addRecord(const QDbfRecord &record)
     stream << ++d->m_recordsCount;
 
     // Write end of file mark
-    const qint64 position = static_cast<qint64>(d->m_recordLength) * d->m_recordsCount + d->m_headerLength;
+    auto position = qint64(d->m_recordLength) * d->m_recordsCount + d->m_headerLength;
 
     if (!d->m_tableFile.seek(position)) {
         d->m_error = QDbfTable::FileReadError;
@@ -1246,6 +1264,7 @@ bool QDbfTable::addRecord(const QDbfRecord &record)
     return setRecord(record);
 }
 
+
 bool QDbfTable::removeRecord(int index)
 {
     if (!d->m_tableFile.isOpen() || !d->m_tableFile.isWritable()) {
@@ -1253,7 +1272,7 @@ bool QDbfTable::removeRecord(int index)
         return false;
     }
 
-    const qint64 position = static_cast<qint64>(d->m_recordLength) * index + d->m_headerLength;
+    auto position = qint64(d->m_recordLength) * index + d->m_headerLength;
 
     if (!d->m_tableFile.seek(position)) {
         d->m_error = QDbfTable::FileReadError;
@@ -1275,12 +1294,26 @@ bool QDbfTable::removeRecord(int index)
     return true;
 }
 
+
 bool QDbfTable::removeRecord()
 {
     return removeRecord(d->m_currentIndex);
 }
 
+
+void QDbfTable::swap(QDbfTable &other) noexcept
+{
+    std::swap(d, other.d);
+}
+
+
+void swap(QDbfTable &lhs, QDbfTable &rhs)
+{
+    lhs.swap(rhs);
+}
+
 } // namespace QDbf
+
 
 QDebug operator<<(QDebug debug, const QDbf::QDbfTable &table)
 {

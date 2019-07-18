@@ -19,15 +19,14 @@
 **
 ***************************************************************************/
 
-
 #ifndef QDBFTABLEMODEL_H
 #define QDBFTABLEMODEL_H
 
-#include "qdbf_compat.h"
+#include <QAbstractTableModel>
+
 #include "qdbf_global.h"
 #include "qdbftable.h"
 
-#include <QAbstractTableModel>
 
 namespace QDbf {
 namespace Internal {
@@ -38,8 +37,12 @@ class QDBF_EXPORT QDbfTableModel : public QAbstractTableModel
 {
     Q_OBJECT
 public:
-    explicit QDbfTableModel(QObject *parent = Q_NULLPTR);
-    QDbfTableModel(const QString &filePath, QObject *parent = Q_NULLPTR);
+    explicit QDbfTableModel(QObject *parent = nullptr);
+    explicit QDbfTableModel(const QString &filePath, QObject *parent = nullptr);
+
+    QDbfTableModel(QDbfTableModel &&other) noexcept;
+    QDbfTableModel &operator=(QDbfTableModel &&other) noexcept;
+
     ~QDbfTableModel();
 
     bool open(const QString &filePath, bool readOnly = false);
@@ -50,34 +53,39 @@ public:
     QDbfTable::DbfTableError error() const;
     QDate lastUpdate() const;
 
-    int rowCount(const QModelIndex &index = QModelIndex()) const Q_DECL_OVERRIDE;
-    int columnCount(const QModelIndex &index = QModelIndex()) const Q_DECL_OVERRIDE;
+    int rowCount(const QModelIndex &index = QModelIndex()) const override;
+    int columnCount(const QModelIndex &index = QModelIndex()) const override;
 
-    Qt::ItemFlags flags(const QModelIndex &index) const Q_DECL_OVERRIDE;
+    Qt::ItemFlags flags(const QModelIndex &index) const override;
 
-    bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) Q_DECL_OVERRIDE;
-    QVariant data(const QModelIndex &index, int role) const Q_DECL_OVERRIDE;
+    bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
+    QVariant data(const QModelIndex &index, int role) const override;
 
     bool setHeaderData(int section, Qt::Orientation orientation,
-                       const QVariant &value, int role = Qt::DisplayRole) Q_DECL_OVERRIDE;
+                       const QVariant &value, int role = Qt::DisplayRole) override;
 
-    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const Q_DECL_OVERRIDE;
+    QVariant headerData(int section, Qt::Orientation orientation, int role = Qt::DisplayRole) const override;
 
-    bool insertRows(int row, int count, const QModelIndex &index = QModelIndex()) Q_DECL_OVERRIDE;
+    bool insertRows(int row, int count, const QModelIndex &index = QModelIndex()) override;
     bool insertRow(int row, const QModelIndex &index = QModelIndex());
 
-    bool removeRows(int row, int count, const QModelIndex &index = QModelIndex()) Q_DECL_OVERRIDE;
+    bool removeRows(int row, int count, const QModelIndex &index = QModelIndex()) override;
     bool removeRow(int row, const QModelIndex &index = QModelIndex());
 
-    bool canFetchMore(const QModelIndex &index = QModelIndex()) const Q_DECL_OVERRIDE;
-    void fetchMore(const QModelIndex &index = QModelIndex()) Q_DECL_OVERRIDE;
+    bool canFetchMore(const QModelIndex &index = QModelIndex()) const override;
+    void fetchMore(const QModelIndex &index = QModelIndex()) override;
+
+    void swap(QDbfTableModel &other) noexcept;
 
 private:
     Q_DISABLE_COPY(QDbfTableModel)
-    Internal::QDbfTableModelPrivate *const d;
+
+    Internal::QDbfTableModelPrivate *d;
 
     friend class Internal::QDbfTableModelPrivate;
 };
+
+void swap(QDbfTableModel &lhs, QDbfTableModel &rhs);
 
 } // namespace QDbf
 
