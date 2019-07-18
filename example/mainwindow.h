@@ -1,6 +1,6 @@
 /***************************************************************************
 **
-** Copyright (C) 2018 Ivan Pinezhaninov <ivan.pinezhaninov@gmail.com>
+** Copyright (C) 2019 Ivan Pinezhaninov <ivan.pinezhaninov@gmail.com>
 **
 ** This file is part of the QDbf - Qt DBF library.
 **
@@ -18,7 +18,6 @@
 ** along with the QDbf.  If not, see <http://www.gnu.org/licenses/>.
 **
 ***************************************************************************/
-
 
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
