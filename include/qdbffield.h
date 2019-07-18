@@ -24,6 +24,7 @@
 
 #include <QVariant>
 
+#include "qdbf_compat.h"
 #include "qdbf_global.h"
 
 
@@ -39,10 +40,10 @@ public:
     explicit QDbfField(const QString &fieldName = QString());
 
     QDbfField(const QDbfField &other);
-    QDbfField(QDbfField &&other) noexcept;
+    QDbfField(QDbfField &&other) Q_DECL_NOEXCEPT;
 
     QDbfField &operator=(const QDbfField &other);
-    QDbfField &operator=(QDbfField &&other) noexcept;
+    QDbfField &operator=(QDbfField &&other) Q_DECL_NOEXCEPT;
 
     bool operator==(const QDbfField &other) const;
     bool operator!=(const QDbfField &other) const;
@@ -89,7 +90,7 @@ public:
     void setDefaultValue(const QVariant &value);
     QVariant defaultValue() const;
 
-    void swap(QDbfField &other) noexcept;
+    void swap(QDbfField &other) Q_DECL_NOEXCEPT;
 
 private:
     Internal::QDbfFieldPrivate *d;

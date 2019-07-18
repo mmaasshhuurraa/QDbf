@@ -24,6 +24,7 @@
 
 #include <QAbstractTableModel>
 
+#include "qdbf_compat.h"
 #include "qdbf_global.h"
 #include "qdbftable.h"
 
@@ -40,8 +41,8 @@ public:
     explicit QDbfTableModel(QObject *parent = nullptr);
     explicit QDbfTableModel(const QString &filePath, QObject *parent = nullptr);
 
-    QDbfTableModel(QDbfTableModel &&other) noexcept;
-    QDbfTableModel &operator=(QDbfTableModel &&other) noexcept;
+    QDbfTableModel(QDbfTableModel &&other) Q_DECL_NOEXCEPT;
+    QDbfTableModel &operator=(QDbfTableModel &&other) Q_DECL_NOEXCEPT;
 
     ~QDbfTableModel();
 
@@ -75,7 +76,7 @@ public:
     bool canFetchMore(const QModelIndex &index = QModelIndex()) const override;
     void fetchMore(const QModelIndex &index = QModelIndex()) override;
 
-    void swap(QDbfTableModel &other) noexcept;
+    void swap(QDbfTableModel &other) Q_DECL_NOEXCEPT;
 
 private:
     Q_DISABLE_COPY(QDbfTableModel)

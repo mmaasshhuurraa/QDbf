@@ -22,6 +22,7 @@
 #ifndef QDBFRECORD_H
 #define QDBFRECORD_H
 
+#include "qdbf_compat.h"
 #include "qdbf_global.h"
 
 QT_BEGIN_NAMESPACE
@@ -43,10 +44,10 @@ public:
     QDbfRecord();
 
     QDbfRecord(const QDbfRecord &other);
-    QDbfRecord(QDbfRecord &&other) noexcept;
+    QDbfRecord(QDbfRecord &&other) Q_DECL_NOEXCEPT;
 
     QDbfRecord &operator=(const QDbfRecord &other);
-    QDbfRecord &operator=(QDbfRecord &&other) noexcept;
+    QDbfRecord &operator=(QDbfRecord &&other) Q_DECL_NOEXCEPT;
 
     bool operator==(const QDbfRecord &other) const;
     bool operator!=(const QDbfRecord &other) const;
@@ -90,7 +91,7 @@ public:
     void clearValues();
     int count() const;
 
-    void swap(QDbfRecord &other) noexcept;
+    void swap(QDbfRecord &other) Q_DECL_NOEXCEPT;
 
 private:
     Internal::QDbfRecordPrivate *d;

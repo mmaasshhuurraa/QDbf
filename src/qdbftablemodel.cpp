@@ -29,7 +29,7 @@
 #include "qdbfrecord.h"
 #include "qdbftablemodel.h"
 
-constexpr auto DBF_PREFETCH = 255;
+constexpr int DBF_PREFETCH = 255;
 
 
 namespace QDbf {
@@ -86,14 +86,14 @@ QDbfTableModel::QDbfTableModel(const QString &filePath, QObject *parent) :
 }
 
 
-QDbfTableModel::QDbfTableModel(QDbfTableModel &&other) noexcept :
+QDbfTableModel::QDbfTableModel(QDbfTableModel &&other) Q_DECL_NOEXCEPT :
     d(other.d)
 {
     other.d = nullptr;
 }
 
 
-QDbfTableModel &QDbfTableModel::operator=(QDbfTableModel &&other) noexcept
+QDbfTableModel &QDbfTableModel::operator=(QDbfTableModel &&other) Q_DECL_NOEXCEPT
 {
     other.swap(*this);
     return *this;
@@ -428,7 +428,7 @@ void QDbfTableModel::fetchMore(const QModelIndex &)
 }
 
 
-void QDbfTableModel::swap(QDbfTableModel &other) noexcept
+void QDbfTableModel::swap(QDbfTableModel &other) Q_DECL_NOEXCEPT
 {
     std::swap(d, other.d);
 }

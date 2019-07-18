@@ -91,7 +91,7 @@ QDbfField::QDbfField(const QDbfField &other) :
 }
 
 
-QDbfField::QDbfField(QDbfField &&other) noexcept :
+QDbfField::QDbfField(QDbfField &&other) Q_DECL_NOEXCEPT :
     d(other.d),
     val(std::move(other.val))
 {
@@ -111,7 +111,7 @@ QDbfField &QDbfField::operator=(const QDbfField &other)
 }
 
 
-QDbfField &QDbfField::operator=(QDbfField &&other) noexcept
+QDbfField &QDbfField::operator=(QDbfField &&other) Q_DECL_NOEXCEPT
 {
     other.swap(*this);
     return *this;
@@ -256,7 +256,7 @@ QVariant QDbfField::defaultValue() const
 }
 
 
-void QDbfField::swap(QDbfField &other) noexcept
+void QDbfField::swap(QDbfField &other) Q_DECL_NOEXCEPT
 {
     std::swap(d, other.d);
     std::swap(val, other.val);

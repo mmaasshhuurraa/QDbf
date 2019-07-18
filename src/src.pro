@@ -37,11 +37,12 @@ win32 {
 contains(QT_CONFIG, reduce_exports):CONFIG += hide_symbols
 
 HEADERS += \
+    $$SOURCE_TREE/include/qdbf_compat.h \
+    $$SOURCE_TREE/include/qdbf_global.h \
     $$SOURCE_TREE/include/qdbffield.h \
     $$SOURCE_TREE/include/qdbfrecord.h \
     $$SOURCE_TREE/include/qdbftable.h \
-    $$SOURCE_TREE/include/qdbftablemodel.h \
-    $$SOURCE_TREE/include/qdbf_global.h
+    $$SOURCE_TREE/include/qdbftablemodel.h
 
 SOURCES += \
     $$SOURCE_TREE/src/qdbffield.cpp \

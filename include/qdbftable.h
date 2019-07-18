@@ -24,6 +24,7 @@
 
 #include <QString>
 
+#include "qdbf_compat.h"
 #include "qdbf_global.h"
 
 QT_BEGIN_NAMESPACE
@@ -72,8 +73,8 @@ public:
 
     explicit QDbfTable(const QString &dbfFileName = QString());
 
-    QDbfTable(QDbfTable &&other) noexcept;
-    QDbfTable &operator=(QDbfTable &&other) noexcept;
+    QDbfTable(QDbfTable &&other) Q_DECL_NOEXCEPT;
+    QDbfTable &operator=(QDbfTable &&other) Q_DECL_NOEXCEPT;
 
     virtual ~QDbfTable();
 
@@ -115,7 +116,7 @@ public:
     bool removeRecord(int index);
     bool removeRecord();
 
-    void swap(QDbfTable &other) noexcept;
+    void swap(QDbfTable &other) Q_DECL_NOEXCEPT;
 
 private:
     Q_DISABLE_COPY(QDbfTable)

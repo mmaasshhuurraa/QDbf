@@ -69,6 +69,7 @@ else()
 endif()
 
 set(HEADERS
+  include/qdbf_compat.h
   include/qdbf_global.h
   include/qdbffield.h
   include/qdbfrecord.h

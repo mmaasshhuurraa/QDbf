@@ -66,7 +66,7 @@ QDbfRecord::QDbfRecord(const QDbfRecord &other) :
 }
 
 
-QDbfRecord::QDbfRecord(QDbfRecord &&other) noexcept :
+QDbfRecord::QDbfRecord(QDbfRecord &&other) Q_DECL_NOEXCEPT :
     d(other.d)
 {
     other.d = nullptr;
@@ -84,7 +84,7 @@ QDbfRecord &QDbfRecord::operator=(const QDbfRecord &other)
 }
 
 
-QDbfRecord &QDbfRecord::operator=(QDbfRecord &&other) noexcept
+QDbfRecord &QDbfRecord::operator=(QDbfRecord &&other) Q_DECL_NOEXCEPT
 {
     other.swap(*this);
     return *this;
@@ -306,7 +306,7 @@ int QDbfRecord::count() const
 }
 
 
-void QDbfRecord::swap(QDbfRecord &other) noexcept
+void QDbfRecord::swap(QDbfRecord &other) Q_DECL_NOEXCEPT
 {
     std::swap(d, other.d);
 }
