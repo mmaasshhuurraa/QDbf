@@ -57,10 +57,10 @@ public:
     void setRecordIndex(int index);
     int recordIndex() const;
 
-    void setValue(int fieldIndex, const QVariant &value);
+    void setValue(int fieldIndex, QVariant value);
     QVariant value(int fieldIndex) const;
 
-    void setValue(const QString &fieldName, const QVariant &value);
+    void setValue(const QString &fieldName, QVariant value);
     QVariant value(const QString &fieldName) const;
 
     void setNull(int fieldIndex);

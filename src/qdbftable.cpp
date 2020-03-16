@@ -107,10 +107,10 @@ const quint8 TIMESTAMP_LENGTH = 8;
 namespace QDbf {
 namespace Internal {
 
-class QDbfTablePrivate
+class QDbfTablePrivate final
 {
 public:
-    explicit QDbfTablePrivate(const QString &dbfFileName);
+    explicit QDbfTablePrivate(QString &&dbfFileName);
 
     enum QDbfMemoType {
         NoMemo,
@@ -162,8 +162,8 @@ public:
 };
 
 
-QDbfTablePrivate::QDbfTablePrivate(const QString &dbfFileName) :
-    m_tableFileName(dbfFileName),
+QDbfTablePrivate::QDbfTablePrivate(QString &&dbfFileName) :
+    m_tableFileName(std::move(dbfFileName)),
     m_textCodec(QTextCodec::codecForLocale())
 {
 }
@@ -666,8 +666,8 @@ void QDbfTablePrivate::setLastUpdate()
 } // namespace Internal
 
 
-QDbfTable::QDbfTable(const QString &dbfFileName) :
-    d(new Internal::QDbfTablePrivate(dbfFileName))
+QDbfTable::QDbfTable(QString dbfFileName) :
+    d(new Internal::QDbfTablePrivate(std::move(dbfFileName)))
 {
 }
 
@@ -711,9 +711,9 @@ QDbfTable::DbfTableError QDbfTable::error() const
 }
 
 
-bool QDbfTable::open(const QString &fileName, OpenMode openMode)
+bool QDbfTable::open(QString fileName, OpenMode openMode)
 {
-    d->m_tableFileName = fileName;
+    d->m_tableFileName = std::move(fileName);
     return open(openMode);
 }
 

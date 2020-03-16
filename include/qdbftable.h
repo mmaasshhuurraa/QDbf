@@ -71,14 +71,14 @@ public:
         UnsupportedFile
     };
 
-    explicit QDbfTable(const QString &dbfFileName = QString());
+    explicit QDbfTable(QString dbfFileName = QString());
 
     QDbfTable(QDbfTable &&other) Q_DECL_NOEXCEPT;
     QDbfTable &operator=(QDbfTable &&other) Q_DECL_NOEXCEPT;
 
     virtual ~QDbfTable();
 
-    bool open(const QString &fileName, OpenMode openMode = QDbfTable::ReadOnly);
+    bool open(QString fileName, OpenMode openMode = QDbfTable::ReadOnly);
     bool open(OpenMode openMode = QDbfTable::ReadOnly);
     void close();
 
