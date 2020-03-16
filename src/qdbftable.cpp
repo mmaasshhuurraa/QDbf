@@ -147,7 +147,7 @@ public:
     QDbfTable::OpenMode m_openMode = QDbfTable::ReadOnly;
     QDbfMemoType m_memoType = QDbfTablePrivate::NoMemo;
     QDbfTable::Codepage m_codepage = QDbfTable::CodepageNotSet;
-    QDbfTable::Codepage m_default_codepage;
+    QDbfTable::Codepage m_defaultCodepage = QDbfTable::CodepageNotSet;
     mutable QDbfRecord m_currentRecord;
     QDbfRecord m_record;
     quint16 m_headerLength = 0;
@@ -308,7 +308,7 @@ QDataStream::ByteOrder QDbfTablePrivate::memoByteOrder() const
 
 void QDbfTablePrivate::setDefaultCodepage(QDbfTable::Codepage codepage)
 {
-    m_default_codepage = codepage;
+    m_defaultCodepage = codepage;
 }
 
 
@@ -818,7 +818,7 @@ bool QDbfTable::open(OpenMode openMode)
     stream >> codepage;
     switch(codepage) {
     case CODEPAGE_NOT_SET:
-        d->m_codepage = d->m_default_codepage;
+        d->m_codepage = d->m_defaultCodepage;
         break;
     case CODEPAGE_US_MSDOS:
         d->m_codepage = QDbfTable::IBM437;
