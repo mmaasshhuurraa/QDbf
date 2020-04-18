@@ -59,7 +59,8 @@ public:
         Memo,
         Number,
         Integer,
-        DateTime
+        DateTime,
+        Currency
     };
 
     void setValue(QVariant value);

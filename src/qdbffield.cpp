@@ -287,6 +287,8 @@ QString typeToString(QDbf::QDbfField::QDbfType type)
     switch (type) {
     case QDbf::QDbfField::Character:
         return QLatin1String("Character");
+    case QDbf::QDbfField::Currency:
+        return QLatin1String("Currency");
     case QDbf::QDbfField::Date:
         return QLatin1String("Date");
     case QDbf::QDbfField::DateTime:

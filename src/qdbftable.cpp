@@ -52,6 +52,7 @@ const quint16 MEMO_DBT_BLOCK_LENGTH = 512;
 const quint8 MEMO_SIGNATURE_TEXT = 1;
 
 const quint8 FIELD_TYPE_CHARACTER = 0x43;      // C
+const quint8 FIELD_TYPE_CURRENCY = 0x59;       // Y
 const quint8 FIELD_TYPE_DATE = 0x44;           // D
 const quint8 FIELD_TYPE_FLOATING_POINT = 0x46; // F
 const quint8 FIELD_TYPE_LOGICAL = 0x4C;        // L
@@ -102,6 +103,8 @@ const quint8 DATETIME_DATE_OFFSET = 0;
 const quint8 DATETIME_TIME_OFFSET = 8;
 
 const quint8 TIMESTAMP_LENGTH = 8;
+
+const double CURRENCY_MULTIPLIER = 10000.0;
 
 
 namespace QDbf {
@@ -372,6 +375,7 @@ bool QDbfTablePrivate::isValueValid(int i, const QVariant &value) const
         return value.canConvert(QVariant::Date);
     case QDbfField::FloatingPoint:
     case QDbfField::Number:
+    case QDbfField::Currency:
         return value.canConvert(QVariant::Double);
     case QDbfField::Logical:
         return value.canConvert(QVariant::Bool);
@@ -491,6 +495,12 @@ bool QDbfTablePrivate::setValue(int fieldIndex, const QVariant &value)
         data = m_textCodec->fromUnicode(value.toString()
                                         .leftJustified(m_record.field(fieldIndex).length(), QLatin1Char(FIELD_SPACER), true));
         break;
+    case QDbfField::Currency: {
+        QDataStream stream(&data, QIODevice::WriteOnly);
+        stream.setByteOrder(QDataStream::LittleEndian);
+        stream << qint64(value.toDouble() * CURRENCY_MULTIPLIER);
+        break;
+    }
     case QDbfField::Date:
         data = value.toDate().toString(QLatin1String("yyyyMMdd"))
                .leftJustified(m_record.field(fieldIndex).length(), QLatin1Char(FIELD_SPACER), true).toLatin1();
@@ -884,6 +894,10 @@ bool QDbfTable::open(OpenMode openMode)
             fieldType = QDbfField::Character;
             defaultValue = QString();
             break;
+        case FIELD_TYPE_CURRENCY:
+            fieldType = QDbfField::Currency;
+            defaultValue = 0;
+            break;
         case FIELD_TYPE_DATE:
             fieldType = QDbfField::Date;
             defaultValue = QDate();
@@ -1116,6 +1130,14 @@ QDbfRecord QDbfTable::record() const
         case QDbfField::Character:
             value = d->m_textCodec->toUnicode(byteArray);
             break;
+        case QDbfField::Currency: {
+            QDataStream stream(byteArray);
+            stream.setByteOrder(QDataStream::LittleEndian);
+            qint64 val;
+            stream >> val;
+            value = val / CURRENCY_MULTIPLIER;
+            break;
+        }
         case QDbfField::Date:
             value = QVariant(d->dateFromByteArray(byteArray));
             break;
