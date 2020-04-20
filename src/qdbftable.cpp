@@ -499,7 +499,7 @@ bool QDbfTablePrivate::setValue(int fieldIndex, const QVariant &value)
     case QDbfField::Currency: {
         QDataStream stream(&data, QIODevice::WriteOnly);
         stream.setByteOrder(QDataStream::LittleEndian);
-        stream << qint64(value.toDouble() * std::pow(CURRENCY_BASE, m_record.field(fieldIndex).precision()));
+        stream << qint64(value.toReal() * std::pow(CURRENCY_BASE, m_record.field(fieldIndex).precision()));
         break;
     }
     case QDbfField::Date:
@@ -508,7 +508,7 @@ bool QDbfTablePrivate::setValue(int fieldIndex, const QVariant &value)
         break;
     case QDbfField::FloatingPoint:
     case QDbfField::Number:
-        data = QString::number(value.toDouble(), 'f', m_record.field(fieldIndex).precision())
+        data = QString::number(value.toReal(), 'f', m_record.field(fieldIndex).precision())
                .rightJustified(m_record.field(fieldIndex).length(), QLatin1Char(FIELD_SPACER), true).toLatin1();
         break;
     case QDbfField::Logical:
@@ -1147,7 +1147,7 @@ QDbfRecord QDbfTable::record() const
             if (0 == d->m_record.field(i).precision()) {
                 value = byteArray.trimmed().toInt();
             } else {
-                value = byteArray.trimmed().toDouble();
+                value = QVariant(byteArray.trimmed()).toReal();
             }
             break;
         case QDbfField::Logical: {
