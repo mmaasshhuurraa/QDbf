@@ -24,6 +24,8 @@
 #include "qdbfrecord.h"
 #include "qdbftable.h"
 
+#include <cmath>
+
 #include <QDataStream>
 #include <QDate>
 #include <QDateTime>
@@ -103,8 +105,7 @@ const quint8 DATETIME_DATE_OFFSET = 0;
 const quint8 DATETIME_TIME_OFFSET = 8;
 
 const quint8 TIMESTAMP_LENGTH = 8;
-
-const double CURRENCY_MULTIPLIER = 10000.0;
+const quint8 CURRENCY_BASE = 10;
 
 
 namespace QDbf {
@@ -498,7 +499,7 @@ bool QDbfTablePrivate::setValue(int fieldIndex, const QVariant &value)
     case QDbfField::Currency: {
         QDataStream stream(&data, QIODevice::WriteOnly);
         stream.setByteOrder(QDataStream::LittleEndian);
-        stream << qint64(value.toDouble() * CURRENCY_MULTIPLIER);
+        stream << qint64(value.toDouble() * std::pow(CURRENCY_BASE, m_record.field(fieldIndex).precision()));
         break;
     }
     case QDbfField::Date:
@@ -1135,7 +1136,7 @@ QDbfRecord QDbfTable::record() const
             stream.setByteOrder(QDataStream::LittleEndian);
             qint64 val;
             stream >> val;
-            value = val / CURRENCY_MULTIPLIER;
+            value = qreal(val) / std::pow(CURRENCY_BASE, d->m_currentRecord.field(i).precision());
             break;
         }
         case QDbfField::Date:
