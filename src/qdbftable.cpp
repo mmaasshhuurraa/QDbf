@@ -371,21 +371,21 @@ bool QDbfTablePrivate::isValueValid(int i, const QVariant &value) const
 {
     switch (m_currentRecord.field(i).type()) {
     case QDbfField::Character:
-        return value.canConvert(QVariant::String);
+        return value.canConvert<QString>();
     case QDbfField::Date:
-        return value.canConvert(QVariant::Date);
+        return value.canConvert<QDate>();
     case QDbfField::FloatingPoint:
     case QDbfField::Number:
     case QDbfField::Currency:
-        return value.canConvert(QVariant::Double);
+        return value.canConvert<qreal>();
     case QDbfField::Logical:
-        return value.canConvert(QVariant::Bool);
+        return value.canConvert<bool>();
     case QDbfField::Memo:
-        return m_memoType != QDbfTablePrivate::NoMemo && value.canConvert(QVariant::String);
+        return m_memoType != QDbfTablePrivate::NoMemo && value.canConvert<QString>();
     case QDbfField::Integer:
-        return value.canConvert(QVariant::Int);
+        return value.canConvert<int>();
     case QDbfField::DateTime:
-        return value.canConvert(QVariant::DateTime);
+        return value.canConvert<QDateTime>();
     default:
         return false;
     }
