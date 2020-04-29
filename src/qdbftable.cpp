@@ -160,7 +160,7 @@ public:
     qint16 m_memoBlockLength = 0;
     qint32 m_memoNextFreeBlockIndex = 0;
     qint32 m_recordsCount = 0;
-    mutable qint32 m_currentIndex = 0;
+    mutable qint32 m_currentIndex = BeforeFirstRow;
     mutable bool m_bufered = false;
     bool m_dbc = false;
 };
@@ -178,7 +178,7 @@ void QDbfTablePrivate::clear()
     m_error = QDbfTable::NoError;
     m_openMode = QDbfTable::ReadOnly;
     m_dbc = false;
-    m_memoType = QDbfTablePrivate::NoMemo;
+    m_memoType = NoMemo;
     m_codepage = QDbfTable::CodepageNotSet;
     m_headerLength = 0;
     m_recordLength = 0;
@@ -186,7 +186,7 @@ void QDbfTablePrivate::clear()
     m_recordsCount = 0;
     m_memoNextFreeBlockIndex = 0;
     m_memoBlockLength = 0;
-    m_currentIndex = 0;
+    m_currentIndex = BeforeFirstRow;
     m_bufered = false;
     m_currentRecord = QDbfRecord();
     m_record = QDbfRecord();
@@ -960,6 +960,7 @@ bool QDbfTable::open(OpenMode openMode)
     }
 
     d->m_currentRecord = d->m_record;
+    d->m_currentIndex = Internal::QDbfTablePrivate::BeforeFirstRow;
 
     if (Internal::QDbfTablePrivate::NoMemo != d->m_memoType) {
         return d->openMemoFile();
@@ -1309,7 +1310,7 @@ bool QDbfTable::addRecord(const QDbfRecord &record)
         return false;
     }
 
-    d->m_currentIndex = d->m_recordsCount-1;
+    d->m_currentIndex = d->m_recordsCount - 1;
 
     return setRecord(record);
 }
