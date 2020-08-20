@@ -1085,6 +1085,7 @@ bool QDbfTable::setRecord(const QDbfRecord &record)
         }
     }
 
+    d->m_currentIndex = record.recordIndex();
     d->setLastUpdate();
 
     return true;
@@ -1265,6 +1266,7 @@ bool QDbfTable::addRecord()
     QDbfRecord newRecord(record());
     newRecord.clearValues();
     newRecord.setDeleted(false);
+    newRecord.setRecordIndex(size()+1);
     return addRecord(newRecord);
 }
 
